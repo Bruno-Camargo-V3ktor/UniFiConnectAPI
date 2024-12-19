@@ -6,6 +6,8 @@ use dotenv::dotenv;
 use std::env;
 use std::sync::{Arc, Mutex};
 
+
+
 #[ launch ]
 async fn start() -> _ {
     dotenv().ok(); // Starting environment variables
