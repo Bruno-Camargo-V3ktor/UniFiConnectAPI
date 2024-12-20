@@ -1,16 +1,19 @@
+use rocket::{ launch, routes };
+
 mod unifi;
 use unifi::unifi_controller::UnifiController;
 
-use rocket::{ launch, routes, get, post };
-use dotenv::dotenv;
 use std::env;
 use std::sync::{Arc, Mutex};
+use dotenv::dotenv;
+
 
 
 
 #[ launch ]
 async fn start() -> _ {
-    dotenv().ok(); // Starting environment variables
+    // Starting environment variables
+    dotenv().ok();
 
     // Creating an instance of the Configuration and Request Structure to the Unifi Controller
     let mut unifi = UnifiController::new(
@@ -19,11 +22,12 @@ async fn start() -> _ {
         env::var("UNIFI_PASSWORD").unwrap()
     );
 
+    // Trying to login to the Unifi Controller
     let _ = unifi.authentication_api().await.unwrap();
 
     rocket::build()
-        .mount("/", routes![])
-        .mount("/api", routes![])
+        .mount( "/", routes![] )
+        .mount( "/api", routes![] )
         .manage( Arc::new( Mutex::new(unifi) ) )
 
 }

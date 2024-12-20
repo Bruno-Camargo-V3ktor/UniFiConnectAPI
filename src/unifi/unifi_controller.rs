@@ -5,7 +5,6 @@ pub struct UnifiController {
     base_url: String,
     username: String,
     password: String,
-    site: String,
     authentication: Option< (String, String) >
 }
 
@@ -14,7 +13,7 @@ pub struct UnifiController {
 impl UnifiController {
 
     pub fn new(base_url: String, username: String, password: String) -> Self {
-        Self{ base_url, username, password, site: "default".to_string(), authentication: None }
+        Self{ base_url, username, password, authentication: None }
     }
 
     pub async fn authentication_api(&mut self) -> Result< (String, String), reqwest::Error> {
