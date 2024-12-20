@@ -1,1 +1,1 @@
-pub mod unifi_controller;
+pub mod unifi;

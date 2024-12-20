@@ -1,6 +1,6 @@
 [default]
-address = "127.0.0.1"       # Endereço IP no qual a aplicação será executada
-port = 8000                 # Porta padrão
+address = "0.0.0.0"       # Endereço IP no qual a aplicação será executada
+port = 8000                   # Porta padrão
 workers = 8                 # Número de threads para requisições
 log_level = "normal"              # Nível de log (normal, debug ou critical)
 keep_alive = 5              # Tempo em segundos para conexões Keep-Alive

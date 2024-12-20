@@ -1,7 +1,11 @@
+mod unifi;
+mod utils;
+mod controllers;
+
 use rocket::{ launch, routes };
 
-mod unifi;
-use unifi::unifi_controller::UnifiController;
+use unifi::unifi::UnifiController;
+use controllers::guest_controller::{guest_register, guest_page};
 
 use std::env;
 use std::sync::{Arc, Mutex};
@@ -26,7 +30,7 @@ async fn start() -> _ {
     let _ = unifi.authentication_api().await.unwrap();
 
     rocket::build()
-        .mount( "/", routes![] )
+        .mount( "/guest", routes![guest_page, guest_register] )
         .mount( "/api", routes![] )
         .manage( Arc::new( Mutex::new(unifi) ) )
 

@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+
 // Structs
 pub struct UnifiController {
     base_url: String,
