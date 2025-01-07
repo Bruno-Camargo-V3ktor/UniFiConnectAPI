@@ -5,13 +5,13 @@ mod controllers;
 use rocket::{ launch, routes };
 
 use unifi::unifi::UnifiController;
-use controllers::guest_controller::{guest_register, guest_page};
+use controllers::guest_controller::{guest_register, guest_page, connect_guest_with_authenticator};
+
+use tokio::sync::Mutex;
 
 use std::env;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use dotenv::dotenv;
-
-
 
 
 #[ launch ]
@@ -31,7 +31,7 @@ async fn start() -> _ {
 
     rocket::build()
         .mount( "/guest", routes![guest_page, guest_register] )
-        .mount( "/api", routes![] )
+        .mount( "/api", routes![connect_guest_with_authenticator] )
         .manage( Arc::new( Mutex::new(unifi) ) )
 
 }
