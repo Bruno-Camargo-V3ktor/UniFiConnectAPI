@@ -1,11 +1,12 @@
 mod unifi;
 mod utils;
 mod controllers;
+mod model;
 
 use rocket::{ launch, routes };
 
 use unifi::unifi::UnifiController;
-use controllers::guest_controller::{guest_register, guest_page, connect_guest_with_authenticator};
+use controllers::guest_controller::{guest_register, guest_page, guest_connection_request};
 
 use tokio::sync::Mutex;
 
@@ -31,7 +32,7 @@ async fn start() -> _ {
 
     rocket::build()
         .mount( "/guest", routes![guest_page, guest_register] )
-        .mount( "/api", routes![connect_guest_with_authenticator] )
+        .mount( "/api", routes![guest_connection_request] )
         .manage( Arc::new( Mutex::new(unifi) ) )
 
 }
