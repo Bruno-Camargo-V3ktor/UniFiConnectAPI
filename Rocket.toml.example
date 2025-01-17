@@ -9,7 +9,7 @@ temp_dir = "/tmp"           # Diretório temporário para uploads
 secret_key = "${ROCKET_SECRET_KEY}" # Chave secreta carregada de uma variável de ambiente
 
 [default.databases.mongodb] #Configurações Do MongoDB
-url = "mongodb://albras:P0ssw0rd@localhost:27017/"  #String de conexão do Mongo
+url = "{MONGO_URL}"  #String de conexão do Mongo
 
 [debug]
 log_level = "normal"
