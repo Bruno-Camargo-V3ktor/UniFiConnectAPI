@@ -1,21 +1,25 @@
 use rocket::serde::{Deserialize, Serialize};
 
 // Enums
-#[ derive(Deserialize, Debug) ]
-//#[ serde(tag = "type") ]
-#[ serde(untagged) ]
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
 pub enum GuestData {
     Info(GuestInfo),
-    Form(GuestForm)
+    Form(GuestForm),
 }
 
 // Structs
-#[ derive( Serialize, Deserialize, Debug ) ]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GuestForm {
-    pub au_code: Option<u16>
+    pub full_name: String,
+    pub email: String,
+    pub phone: String,
+    pub cpf: String,
+    pub au_code: Option<u16>,
+    pub menssage: Option<String>,
 }
 
-#[ derive( Serialize, Deserialize, Debug ) ]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GuestInfo {
     pub id: Option<String>,
     pub mac: String,
@@ -23,7 +27,5 @@ pub struct GuestInfo {
     pub minutes: u16,
 }
 
-#[ derive( Serialize, Deserialize ) ]
-pub struct Guest {
-
-}
+#[derive(Serialize, Deserialize)]
+pub struct Guest {}
