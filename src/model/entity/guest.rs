@@ -15,6 +15,7 @@ pub enum GuestStatus {
     Approved,
     Pending,
     Reject,
+    Expired,
 }
 
 // Structs
@@ -24,7 +25,7 @@ pub struct GuestForm {
     pub email: String,
     pub phone: String,
     pub cpf: String,
-    pub au_code: Option<u16>,
+    pub au_code: Option<String>,
     pub menssage: Option<String>,
 }
 
@@ -41,6 +42,8 @@ pub struct GuestInfo {
 pub struct Guest {
     #[serde(rename = "_id", with = "serde_object_id")]
     pub id: String,
+    pub active: bool,
+
     pub full_name: String,
     pub email: String,
     pub phone: String,

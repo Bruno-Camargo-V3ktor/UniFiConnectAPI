@@ -3,6 +3,7 @@ pub mod admin_repositoy;
 pub mod guest_repository;
 
 // Traits
+#[allow(unused)]
 pub trait Repository {
     type Id;
     type Entity;

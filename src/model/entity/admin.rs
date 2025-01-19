@@ -4,8 +4,8 @@ use rocket::serde::{Deserialize, Serialize};
 // Structs
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AdminLogin {
-    username: String,
-    password: String,
+    pub username: String,
+    pub password: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
