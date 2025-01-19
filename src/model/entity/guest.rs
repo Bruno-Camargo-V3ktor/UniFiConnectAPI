@@ -1,3 +1,5 @@
+use crate::db::mongo_db::serde_object_id;
+use chrono::{DateTime, Local, Utc};
 use rocket::serde::{Deserialize, Serialize};
 
 // Enums
@@ -6,6 +8,13 @@ use rocket::serde::{Deserialize, Serialize};
 pub enum GuestData {
     Info(GuestInfo),
     Form(GuestForm),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub enum GuestStatus {
+    Approved,
+    Pending,
+    Reject,
 }
 
 // Structs
@@ -25,7 +34,23 @@ pub struct GuestInfo {
     pub mac: String,
     pub site: String,
     pub minutes: u16,
+    pub approved: bool,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct Guest {}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Guest {
+    #[serde(rename = "_id", with = "serde_object_id")]
+    pub id: String,
+    pub full_name: String,
+    pub email: String,
+    pub phone: String,
+    pub cpf: String,
+
+    pub mac: String,
+    pub site: String,
+    pub status: GuestStatus,
+
+    pub time_connection: String,
+    pub start_time: DateTime<Local>,
+    pub approver: String,
+}
