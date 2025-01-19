@@ -16,3 +16,10 @@ pub struct Admin {
     pub username: String,
     pub password: Option<String>,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AdminData {
+    pub name: String,
+    pub username: String,
+    pub password: Option<String>,
+}
