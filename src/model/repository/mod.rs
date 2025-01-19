@@ -1,4 +1,5 @@
 // Mods
+pub mod admin_repositoy;
 pub mod guest_repository;
 
 // Traits
