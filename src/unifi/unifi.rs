@@ -24,6 +24,12 @@ pub struct GuestAuthorization {
     minutes: Option<u16>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct GuestUnauthorize {
+    cmd: String,
+    mac: Option<String>,
+}
+
 // Impls
 impl GuestAuthorization {
     pub fn new(mac: String, minutes: u16) -> Self {
@@ -31,6 +37,15 @@ impl GuestAuthorization {
             cmd: String::from("authorize-guest"),
             mac: Some(mac),
             minutes: Some(minutes),
+        }
+    }
+}
+
+impl GuestUnauthorize {
+    pub fn new(mac: String) -> Self {
+        Self {
+            cmd: String::from("unauthorize-guest"),
+            mac: Some(mac),
         }
     }
 }
@@ -99,6 +114,27 @@ impl UnifiController {
         }
 
         let body = GuestAuthorization::new(mac.to_string(), *minutes);
+
+        let _res = self
+            .client
+            .post(format!("{}/s/{}/cmd/stamgr", self.base_url, site))
+            .json(&body)
+            .send()
+            .await?;
+
+        Ok(())
+    }
+
+    pub async fn unauthorize_guest(
+        &mut self,
+        site: &String,
+        mac: &String,
+    ) -> Result<(), reqwest::Error> {
+        if !self.check_authentication() {
+            let _ = self.authentication_api().await?;
+        }
+
+        let body = GuestUnauthorize::new(mac.to_string());
 
         let _res = self
             .client
