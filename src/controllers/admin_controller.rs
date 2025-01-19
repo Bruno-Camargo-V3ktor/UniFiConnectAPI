@@ -11,7 +11,7 @@ use crate::utils::error::Error;
 // ENDPOINTS
 #[get("/<_..>", format = "text/html")]
 pub async fn admin_page() -> Result<NamedFile, NotFound<String>> {
-    let index_path = env::var("GUEST_LOGIN_PAGE").unwrap();
+    let index_path = env::var("ADMIN_LOGIN_PAGE").unwrap();
 
     NamedFile::open(index_path)
         .await
