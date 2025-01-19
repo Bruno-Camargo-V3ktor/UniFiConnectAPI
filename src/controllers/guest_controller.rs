@@ -10,6 +10,7 @@ use rocket::{get, post};
 use rocket_db_pools::Connection;
 
 use crate::db::mongo_db::MongoDb;
+use crate::model::entity::admin::Admin;
 use crate::model::entity::guest::{Guest, GuestData, GuestStatus};
 use crate::model::repository::Repository;
 use crate::model::repository::guest_repository::GuestRepository;
@@ -56,6 +57,7 @@ pub async fn guest_connection_request(
     db: Connection<MongoDb>,
     unifi: &UnifiState,
     guest_data: Json<GuestData>,
+    admin: Option<Admin>,
 ) -> Result<Status, Custom<Json<Error>>> {
     let repository = GuestRepository {
         database: db.default_database().unwrap(),
@@ -63,6 +65,7 @@ pub async fn guest_connection_request(
     };
 
     let guest_data = guest_data.into_inner();
+    let mut unifi = unifi.lock().await;
 
     match guest_data {
         // Form Call
@@ -73,20 +76,28 @@ pub async fn guest_connection_request(
 
             let guest = Guest {
                 id: String::new(),
+                active: true,
                 full_name: guest_form.full_name,
                 email: guest_form.email,
                 phone: guest_form.phone,
                 cpf: guest_form.cpf,
                 site: site.clone(),
-                approver: "---".to_string(),
+                approver: "default".to_string(),
                 status: GuestStatus::Pending,
                 mac: mac.clone(),
                 time_connection: minutes.to_string(),
                 start_time: Local::now(),
             };
 
+            // Approval by code
             if let Some(code) = guest_form.au_code {
-                let mut unifi = unifi.lock().await;
+                if code != String::from("P@ssw0rd") {
+                    return Err(Error::new_with_custom(
+                        "Invalid Validation Code",
+                        Local::now().to_string(),
+                        401,
+                    ));
+                }
 
                 let res = unifi.authorize_guest(&site, &mac, &minutes).await;
                 match res {
@@ -99,18 +110,27 @@ pub async fn guest_connection_request(
                 return Ok(Status::Accepted);
             }
 
+            // Approval pending
+
             return Ok(Status::Ok);
         }
 
         // API Call
         GuestData::Info(guest_info) => {
-            let mut unifi = unifi.lock().await;
+            if admin.is_none() {
+                return Err(Error::new_with_custom(
+                    "Unauthorized user",
+                    Local::now().to_string(),
+                    401,
+                ));
+            }
 
+            // Approving a pending order
             match guest_info.id {
                 Some(id) => {
                     if let Some(mut g) = repository.find_by_id(id).await {
                         if guest_info.approved {
-                            g.approver = String::from("---");
+                            g.approver = admin.unwrap().name;
                             g.status = GuestStatus::Approved;
                             g.start_time = Local::now();
 
@@ -130,21 +150,34 @@ pub async fn guest_connection_request(
                 None => {}
             }
 
-            let res = unifi
-                .authorize_guest(&guest_info.site, &guest_info.mac, &guest_info.minutes)
-                .await;
+            // Direct approval
+            let res = if guest_info.approved {
+                unifi
+                    .authorize_guest(&guest_info.site, &guest_info.mac, &guest_info.minutes)
+                    .await
+            } else {
+                unifi
+                    .unauthorize_guest(&guest_info.site, &guest_info.mac)
+                    .await
+            };
 
             match res {
                 Ok(_) => {
                     let guest = Guest {
                         id: String::new(),
+                        active: true,
+
                         full_name: String::from("---"),
                         email: String::from("---"),
                         phone: String::from("---"),
                         cpf: String::from("---"),
 
-                        approver: "---".to_string(),
-                        status: GuestStatus::Approved,
+                        approver: admin.unwrap().name,
+                        status: if guest_info.approved {
+                            GuestStatus::Approved
+                        } else {
+                            GuestStatus::Reject
+                        },
                         mac: guest_info.mac,
                         site: guest_info.site,
 

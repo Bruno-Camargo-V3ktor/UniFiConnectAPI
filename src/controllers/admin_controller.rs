@@ -1,4 +1,5 @@
-use bcrypt::{DEFAULT_COST, hash};
+use bcrypt::{DEFAULT_COST, hash, verify};
+use bson::doc;
 use chrono::Local;
 use rocket::fairing::Result;
 use rocket::fs::NamedFile;
@@ -13,6 +14,7 @@ use crate::db::mongo_db::MongoDb;
 use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
 use crate::model::repository::Repository;
 use crate::model::repository::admin_repositoy::AdminRepository;
+use crate::security::auth_jwt::create_token;
 use crate::utils::error::Error;
 
 // ENDPOINTS
@@ -26,15 +28,55 @@ pub async fn admin_page() -> Result<NamedFile, NotFound<String>> {
 }
 
 #[post("/admin/login", data = "<data>")]
-pub async fn login(data: Json<AdminLogin>) -> Result<Accepted<String>, Custom<Json<Error>>> {
-    Ok(Accepted(String::from("token...")))
+pub async fn login(
+    data: Json<AdminLogin>,
+    db: Connection<MongoDb>,
+) -> Result<Accepted<Json<String>>, Custom<Json<Error>>> {
+    let repository = AdminRepository {
+        database: db.default_database().unwrap(),
+        name: "Admins".to_string(),
+    };
+
+    let res = repository
+        .find_one(doc! {
+           "username" : &data.username
+        })
+        .await;
+
+    match res {
+        Some(admin) => {
+            let check = verify(&data.password, admin.password.unwrap().as_str());
+            if let Ok(b) = check {
+                if b {
+                    return Ok(Accepted(Json(create_token(&admin.id))));
+                }
+            }
+        }
+
+        None => {}
+    }
+
+    Err(Error::new_with_custom(
+        "Username or password not found",
+        Local::now().to_string(),
+        400,
+    ))
 }
 
 #[post("/admin", data = "<data>")]
 pub async fn create_admin(
     data: Json<AdminData>,
     db: Connection<MongoDb>,
+    admin: Option<Admin>,
 ) -> Result<Custom<()>, Custom<Json<Error>>> {
+    if admin.is_none() {
+        return Err(Error::new_with_custom(
+            "Unauthorized user",
+            Local::now().to_string(),
+            401,
+        ));
+    }
+
     let repository = AdminRepository {
         database: db.default_database().unwrap(),
         name: "Admins".to_string(),
@@ -54,7 +96,7 @@ pub async fn create_admin(
             return Err(Custom(
                 Status::BadRequest,
                 Json(Error {
-                    time: Local::now().naive_local().to_string(),
+                    time: Local::now().to_string(),
                     err: String::from("field 'password' not found"),
                     status: 404,
                 }),
@@ -71,7 +113,16 @@ pub async fn create_admin(
 pub async fn update_admin(
     data: Json<Admin>,
     db: Connection<MongoDb>,
+    admin: Option<Admin>,
 ) -> Result<Custom<()>, Custom<Json<Error>>> {
+    if admin.is_none() {
+        return Err(Error::new_with_custom(
+            "Unauthorized user",
+            Local::now().to_string(),
+            401,
+        ));
+    }
+
     let repository = AdminRepository {
         database: db.default_database().unwrap(),
         name: "Admins".to_string(),
@@ -101,7 +152,16 @@ pub async fn update_admin(
 pub async fn delete_admin(
     id: String,
     db: Connection<MongoDb>,
+    admin: Option<Admin>,
 ) -> Result<Custom<()>, Custom<Json<Error>>> {
+    if admin.is_none() {
+        return Err(Error::new_with_custom(
+            "Unauthorized user",
+            Local::now().to_string(),
+            401,
+        ));
+    }
+
     let repository = AdminRepository {
         database: db.default_database().unwrap(),
         name: "Admins".to_string(),
