@@ -4,6 +4,7 @@ mod model;
 mod unifi;
 mod utils;
 
+use controllers::admin_controller::{admin_page, login};
 use controllers::guest_controller::{guest_connection_request, guest_page, guest_register};
 use db::mongo_db::MongoDb;
 use rocket::{launch, routes};
@@ -29,11 +30,12 @@ async fn start() -> _ {
     );
 
     // Trying to login to the Unifi Controller
-    let _ = unifi.authentication_api().await.unwrap();
+    let _ = unifi.authentication_api().await;
 
     rocket::build()
         .attach(MongoDb::init())
         .manage(Arc::new(Mutex::new(unifi)))
+        .mount("/admin", routes![admin_page])
         .mount("/guest", routes![guest_page, guest_register])
-        .mount("/api", routes![guest_connection_request])
+        .mount("/api", routes![guest_connection_request, login])
 }

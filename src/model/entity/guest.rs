@@ -1,5 +1,5 @@
 use crate::db::mongo_db::serde_object_id;
-use chrono::{DateTime, Local, Utc};
+use chrono::{DateTime, Local};
 use rocket::serde::{Deserialize, Serialize};
 
 // Enums
