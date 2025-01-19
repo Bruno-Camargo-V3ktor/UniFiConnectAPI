@@ -1,10 +1,11 @@
 mod controllers;
 mod db;
 mod model;
+mod security;
 mod unifi;
 mod utils;
 
-use controllers::admin_controller::{admin_page, login};
+use controllers::admin_controller::{admin_page, create_admin, delete_admin, login, update_admin};
 use controllers::guest_controller::{guest_connection_request, guest_page, guest_register};
 use db::mongo_db::MongoDb;
 use rocket::{launch, routes};
@@ -37,5 +38,11 @@ async fn start() -> _ {
         .manage(Arc::new(Mutex::new(unifi)))
         .mount("/admin", routes![admin_page])
         .mount("/guest", routes![guest_page, guest_register])
-        .mount("/api", routes![guest_connection_request, login])
+        .mount("/api", routes![
+            guest_connection_request,
+            login,
+            create_admin,
+            update_admin,
+            delete_admin,
+        ])
 }
