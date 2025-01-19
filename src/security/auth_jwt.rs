@@ -1,4 +1,9 @@
-use rocket::serde::{Deserialize, Serialize};
+use rocket::{
+    http::Status,
+    request::{FromRequest, Outcome, Request},
+    serde::{Deserialize, Serialize},
+};
+use rocket_db_pools::Connection;
 use std::{
     env,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -6,9 +11,17 @@ use std::{
 
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode, errors::Result};
 
+use crate::{
+    db::mongo_db::MongoDb,
+    model::{
+        entity::admin::Admin,
+        repository::{Repository, admin_repositoy::AdminRepository},
+    },
+};
+
 // Struct
 #[derive(Debug, Serialize, Deserialize)]
-struct Claims {
+pub struct Claims {
     sub: String,
     exp: usize,
 }
@@ -28,7 +41,7 @@ pub fn create_token(user_id: &String) -> String {
     encode(
         &Header::default(),
         &content,
-        &EncodingKey::from_secret(key.as_ref()),
+        &EncodingKey::from_secret(key.as_bytes()),
     )
     .unwrap()
 }
@@ -42,4 +55,45 @@ pub fn validate_token(token: String) -> Result<Claims> {
         &Validation::default(),
     )
     .map(|data| data.claims)
+}
+
+// Guards
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for Admin {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let keys: Vec<_> = request.headers().get("Authorization").collect();
+
+        if keys.len() < 1 {
+            return Outcome::Forward(Status::Continue);
+        }
+
+        let token = keys[0].replace("Bearer ", "");
+
+        match validate_token(token.to_string()) {
+            Ok(content) => {
+                let repository = AdminRepository {
+                    database: request
+                        .guard::<Connection<MongoDb>>()
+                        .await
+                        .unwrap()
+                        .default_database()
+                        .unwrap(),
+                    name: "Admins".to_string(),
+                };
+
+                let res = repository.find_by_id(content.sub).await;
+
+                if let Some(admin) = res {
+                    return Outcome::Success(admin);
+                } else {
+                    return Outcome::Forward(Status::Continue);
+                }
+            }
+            Err(_) => {}
+        }
+
+        Outcome::Forward(Status::Continue)
+    }
 }
