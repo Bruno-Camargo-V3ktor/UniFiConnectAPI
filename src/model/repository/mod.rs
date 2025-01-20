@@ -1,5 +1,6 @@
 // Mods
 pub mod admin_repositoy;
+pub mod approver_repository;
 pub mod guest_repository;
 
 // Traits
