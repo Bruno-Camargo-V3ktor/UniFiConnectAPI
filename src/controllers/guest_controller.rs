@@ -7,9 +7,7 @@ use rocket::response::{
 };
 use rocket::serde::json::Json;
 use rocket::{get, post};
-use rocket_db_pools::Connection;
 
-use crate::db::mongo_db::MongoDb;
 use crate::model::entity::admin::Admin;
 use crate::model::entity::guest::{Guest, GuestData, GuestStatus};
 use crate::model::repository::Repository;
@@ -54,16 +52,11 @@ pub async fn guest_register(
 #[post("/guest/connect", format = "application/json", data = "<guest_data>")]
 pub async fn guest_connection_request(
     cookies: &CookieJar<'_>,
-    db: Connection<MongoDb>,
+    repository: GuestRepository,
     unifi: &UnifiState,
     guest_data: Json<GuestData>,
     admin: Option<Admin>,
 ) -> Result<Status, Custom<Json<Error>>> {
-    let repository = GuestRepository {
-        database: db.default_database().unwrap(),
-        name: String::from("Guest"),
-    };
-
     let guest_data = guest_data.into_inner();
     let mut unifi = unifi.lock().await;
 

@@ -7,10 +7,8 @@ use rocket::http::Status;
 use rocket::response::status::{Accepted, Custom, NotFound};
 use rocket::serde::json::Json;
 use rocket::{delete, get, post, put};
-use rocket_db_pools::Connection;
 use std::env;
 
-use crate::db::mongo_db::MongoDb;
 use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
 use crate::model::repository::Repository;
 use crate::model::repository::admin_repositoy::AdminRepository;
@@ -30,13 +28,8 @@ pub async fn admin_page() -> Result<NamedFile, NotFound<String>> {
 #[post("/admin/login", data = "<data>")]
 pub async fn login(
     data: Json<AdminLogin>,
-    db: Connection<MongoDb>,
+    repository: AdminRepository,
 ) -> Result<Accepted<Json<String>>, Custom<Json<Error>>> {
-    let repository = AdminRepository {
-        database: db.default_database().unwrap(),
-        name: "Admins".to_string(),
-    };
-
     let res = repository
         .find_one(doc! {
            "username" : &data.username
@@ -66,7 +59,7 @@ pub async fn login(
 #[post("/admin", data = "<data>")]
 pub async fn create_admin(
     data: Json<AdminData>,
-    db: Connection<MongoDb>,
+    repository: AdminRepository,
     admin: Option<Admin>,
 ) -> Result<Custom<()>, Custom<Json<Error>>> {
     if admin.is_none() {
@@ -76,11 +69,6 @@ pub async fn create_admin(
             401,
         ));
     }
-
-    let repository = AdminRepository {
-        database: db.default_database().unwrap(),
-        name: "Admins".to_string(),
-    };
 
     let data = data.into_inner();
     let mut new_admin = Admin {
@@ -112,7 +100,7 @@ pub async fn create_admin(
 #[put("/admin", data = "<data>")]
 pub async fn update_admin(
     data: Json<Admin>,
-    db: Connection<MongoDb>,
+    repository: AdminRepository,
     admin: Option<Admin>,
 ) -> Result<Custom<()>, Custom<Json<Error>>> {
     if admin.is_none() {
@@ -122,11 +110,6 @@ pub async fn update_admin(
             401,
         ));
     }
-
-    let repository = AdminRepository {
-        database: db.default_database().unwrap(),
-        name: "Admins".to_string(),
-    };
 
     let mut admin = data.into_inner();
 
@@ -151,7 +134,7 @@ pub async fn update_admin(
 #[delete("/admin/<id>")]
 pub async fn delete_admin(
     id: String,
-    db: Connection<MongoDb>,
+    repository: AdminRepository,
     admin: Option<Admin>,
 ) -> Result<Custom<()>, Custom<Json<Error>>> {
     if admin.is_none() {
@@ -161,11 +144,6 @@ pub async fn delete_admin(
             401,
         ));
     }
-
-    let repository = AdminRepository {
-        database: db.default_database().unwrap(),
-        name: "Admins".to_string(),
-    };
 
     let _ = repository.delete_by_id(id).await;
 

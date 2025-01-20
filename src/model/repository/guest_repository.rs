@@ -1,7 +1,8 @@
 use super::Repository;
-use crate::model::entity::guest::Guest;
+use crate::{db::mongo_db::MongoDb, model::entity::guest::Guest};
 use bson::{Document, doc, oid::ObjectId, to_document};
-use rocket_db_pools::mongodb::Database;
+use rocket::request::{FromRequest, Outcome, Request};
+use rocket_db_pools::{Connection, mongodb::Database};
 
 // Structs
 pub struct GuestRepository {
@@ -165,5 +166,21 @@ impl Repository for GuestRepository {
             Ok(r) => r.deleted_count as usize,
             Err(_) => 0,
         }
+    }
+}
+
+// Guards
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for GuestRepository {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let db = request.guard::<Connection<MongoDb>>().await.unwrap();
+        let repository = GuestRepository {
+            database: db.default_database().unwrap(),
+            name: "Guests".to_string(),
+        };
+
+        Outcome::Success(repository)
     }
 }
