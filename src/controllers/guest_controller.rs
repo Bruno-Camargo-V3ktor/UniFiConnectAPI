@@ -11,7 +11,9 @@ use rocket::{get, post};
 use crate::model::entity::admin::Admin;
 use crate::model::entity::guest::{Guest, GuestData, GuestStatus};
 use crate::model::repository::Repository;
+use crate::model::repository::approver_repository::ApproverRepository;
 use crate::model::repository::guest_repository::GuestRepository;
+use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiState;
 use crate::utils::error::Error;
 
@@ -53,6 +55,7 @@ pub async fn guest_register(
 pub async fn guest_connection_request(
     cookies: &CookieJar<'_>,
     repository: GuestRepository,
+    approver_repository: ApproverRepository,
     unifi: &UnifiState,
     guest_data: Json<GuestData>,
     admin: Option<Admin>,
@@ -67,7 +70,7 @@ pub async fn guest_connection_request(
             let site = cookies.get("site").unwrap().value().to_string();
             let minutes: u16 = 180;
 
-            let guest = Guest {
+            let mut guest = Guest {
                 id: String::new(),
                 active: true,
                 full_name: guest_form.full_name,
@@ -75,7 +78,7 @@ pub async fn guest_connection_request(
                 phone: guest_form.phone,
                 cpf: guest_form.cpf,
                 site: site.clone(),
-                approver: "default".to_string(),
+                approver: "---".to_string(),
                 status: GuestStatus::Pending,
                 mac: mac.clone(),
                 time_connection: minutes.to_string(),
@@ -84,14 +87,16 @@ pub async fn guest_connection_request(
 
             // Approval by code
             if let Some(code) = guest_form.au_code {
-                if code != String::from("P@ssw0rd") {
+                let approver = validate_code(code, &approver_repository).await;
+                if approver.is_none() {
                     return Err(Error::new_with_custom(
-                        "Invalid Validation Code",
+                        "Invalid Fields",
                         Local::now().to_string(),
-                        401,
+                        400,
                     ));
                 }
 
+                guest.approver = approver.unwrap();
                 let res = unifi.authorize_guest(&site, &mac, &minutes).await;
                 match res {
                     Ok(_) => {
@@ -104,7 +109,7 @@ pub async fn guest_connection_request(
             }
 
             // Approval pending
-
+            let _ = repository.save(guest).await;
             return Ok(Status::Ok);
         }
 
