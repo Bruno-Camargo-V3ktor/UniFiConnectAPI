@@ -2,12 +2,10 @@ use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
 use chrono::Local;
 use rocket::fairing::Result;
-use rocket::fs::NamedFile;
 use rocket::http::Status;
-use rocket::response::status::{Accepted, Custom, NotFound};
+use rocket::response::status::{Accepted, Custom};
 use rocket::serde::json::Json;
-use rocket::{delete, get, post, put};
-use std::env;
+use rocket::{delete, post, put};
 
 use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
 use crate::model::repository::Repository;
@@ -16,15 +14,6 @@ use crate::security::auth_jwt::create_token;
 use crate::utils::error::Error;
 
 // ENDPOINTS
-#[get("/<_..>", format = "text/html")]
-pub async fn admin_page() -> Result<NamedFile, NotFound<String>> {
-    let index_path = env::var("ADMIN_LOGIN_PAGE").unwrap();
-
-    NamedFile::open(index_path)
-        .await
-        .map_err(|_| NotFound("Page not found".to_string()))
-}
-
 #[post("/admin/login", data = "<data>")]
 pub async fn login(
     data: Json<AdminLogin>,

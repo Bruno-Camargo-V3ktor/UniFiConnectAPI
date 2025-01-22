@@ -5,10 +5,11 @@ mod security;
 mod unifi;
 mod utils;
 
-use controllers::admin_controller::{admin_page, create_admin, delete_admin, login, update_admin};
-use controllers::approver_controller::{delete_approver, update_approver, create_approver};
-use controllers::guest_controller::{guest_connection_request, guest_page, guest_register};
+use controllers::admin_controller::{create_admin, delete_admin, login, update_admin};
+use controllers::approver_controller::{create_approver, delete_approver, update_approver};
+use controllers::guest_controller::{guest_connection_request, guest_register};
 use db::mongo_db::MongoDb;
+use rocket::fs::FileServer;
 use rocket::{launch, routes};
 use rocket_db_pools::Database;
 use unifi::unifi::UnifiController;
@@ -37,8 +38,15 @@ async fn start() -> _ {
     rocket::build()
         .attach(MongoDb::init())
         .manage(Arc::new(Mutex::new(unifi)))
-        .mount("/admin", routes![admin_page])
-        .mount("/guest", routes![guest_page, guest_register])
+        .mount(
+            "/guest",
+            FileServer::from(env::var("GUEST_LOGIN_PAGE").unwrap()),
+        )
+        .mount(
+            "/admin",
+            FileServer::from(env::var("ADMIN_LOGIN_PAGE").unwrap()),
+        )
+        .mount("/guest", routes![guest_register])
         .mount("/api", routes![
             guest_connection_request,
             login,

@@ -1,9 +1,8 @@
 use chrono::Local;
-use rocket::fs::NamedFile;
 use rocket::http::{CookieJar, Status};
 use rocket::response::{
     Redirect,
-    status::{BadRequest, Custom, NotFound},
+    status::{BadRequest, Custom},
 };
 use rocket::serde::json::Json;
 use rocket::{get, post};
@@ -17,18 +16,7 @@ use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiState;
 use crate::utils::error::Error;
 
-use std::env;
-
 // ENDPOINTS
-#[get("/index/<_..>", format = "text/html")]
-pub async fn guest_page() -> Result<NamedFile, NotFound<String>> {
-    let index_path = env::var("GUEST_LOGIN_PAGE").unwrap();
-
-    NamedFile::open(index_path)
-        .await
-        .map_err(|_| NotFound("Page not found".to_string()))
-}
-
 #[get("/s/<site>?<ap>&<id>&<t>&<url>&<ssid>", format = "text/html")]
 pub async fn guest_register(
     cookies: &CookieJar<'_>,
@@ -48,7 +36,7 @@ pub async fn guest_register(
     cookies.add(("site", site.clone()));
     cookies.add(("url", url.clone()));
 
-    Ok(Redirect::to("/guest/index"))
+    Ok(Redirect::to("/guest/"))
 }
 
 #[post("/guest/connect", format = "application/json", data = "<guest_data>")]
@@ -145,7 +133,7 @@ pub async fn guest_connection_request(
                     }
                 }
 
-                None => {}
+                _ => {}
             }
 
             // Direct approval
