@@ -13,7 +13,7 @@ use crate::model::repository::Repository;
 use crate::model::repository::approver_repository::ApproverRepository;
 use crate::model::repository::guest_repository::GuestRepository;
 use crate::security::approval_code::validate_code;
-use crate::unifi::unifi::UnifiState;
+use crate::unifi::unifi::UnifiController;
 use crate::utils::error::Error;
 
 // ENDPOINTS
@@ -44,12 +44,11 @@ pub async fn guest_connection_request(
     cookies: &CookieJar<'_>,
     repository: GuestRepository,
     approver_repository: ApproverRepository,
-    unifi: &UnifiState,
+    mut unifi: UnifiController,
     guest_data: Json<GuestData>,
     admin: Option<Admin>,
 ) -> Result<Status, Custom<Json<Error>>> {
     let guest_data = guest_data.into_inner();
-    let mut unifi = unifi.lock().await;
 
     match guest_data {
         // Form Call

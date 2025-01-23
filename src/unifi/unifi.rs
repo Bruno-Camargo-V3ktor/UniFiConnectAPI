@@ -1,4 +1,5 @@
 use rocket::State;
+use rocket::request::{FromRequest, Outcome, Request};
 use rocket::serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -9,6 +10,7 @@ use tokio::sync::Mutex;
 pub type UnifiState = State<Arc<Mutex<UnifiController>>>;
 
 // Structs
+#[derive(Clone)]
 pub struct UnifiController {
     base_url: String,
     username: String,
@@ -165,5 +167,16 @@ impl UnifiController {
             .await?;
 
         Ok(())
+    }
+}
+
+// Guards
+#[rocket::async_trait]
+impl<'r> FromRequest<'r> for UnifiController {
+    type Error = ();
+
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let unifi = request.guard::<&UnifiState>().await.unwrap().lock().await;
+        Outcome::Success(unifi.clone())
     }
 }
