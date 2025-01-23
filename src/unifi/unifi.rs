@@ -145,4 +145,25 @@ impl UnifiController {
 
         Ok(())
     }
+
+    pub async fn rename_device_client(
+        &mut self,
+        id: String,
+        site: String,
+        name: String,
+    ) -> Result<(), reqwest::Error> {
+        if !self.check_authentication() {
+            let _ = self.authentication_api().await?;
+        }
+
+        let body = HashMap::from([("name", name.as_str())]);
+        let _res = self
+            .client
+            .put(format!("{}/s/{}/upd/user/{}", self.base_url, site, id))
+            .json(&body)
+            .send()
+            .await?;
+
+        Ok(())
+    }
 }
