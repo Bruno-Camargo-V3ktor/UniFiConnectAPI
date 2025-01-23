@@ -46,6 +46,8 @@ pub struct ClientInfo {
     /// MAC address do dispositivo convidado
     pub mac: String,
 
+    pub name: Option<String>,
+
     /// Hostname do dispositivo
     pub hostname: Option<String>,
 
