@@ -1,6 +1,7 @@
 use rocket::State;
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket::serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -30,6 +31,69 @@ pub struct GuestAuthorization {
 pub struct GuestUnauthorize {
     cmd: String,
     mac: Option<String>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ClientInfo {
+    /// ID interno do UniFi para este registro
+    #[serde(rename = "_id")]
+    pub record_id: Option<String>,
+
+    /// Outro ID interno que às vezes aparece (ex.: "user_id")
+    #[serde(rename = "user_id")]
+    pub user_id: Option<String>,
+
+    /// MAC address do dispositivo convidado
+    pub mac: String,
+
+    /// Hostname do dispositivo
+    pub hostname: Option<String>,
+
+    /// Indica se o cliente está ou não autorizado no portal
+    pub authorized: Option<bool>,
+
+    /// True se for tratado como convidado
+    #[serde(rename = "is_guest")]
+    pub is_guest: Option<bool>,
+
+    /// Momento (em unix epoch) em que foi associada a rede
+    pub assoc_time: Option<u64>,
+
+    /// Timestamp mais recente em que o controller viu atividade desse convidado
+    pub last_seen: Option<u64>,
+
+    /// Início da autorização (caso exista, p.ex. para voucher)
+    pub start: Option<u64>,
+
+    /// Fim da autorização (caso exista, se há tempo de expiração)
+    pub end: Option<u64>,
+
+    /// IP obtido via DHCP (se conectado)
+    pub ip: Option<String>,
+
+    /// Nome do SSID guest
+    pub essid: Option<String>,
+
+    /// Nome do AP ao qual este cliente está/estava conectado
+    #[serde(rename = "ap_name")]
+    pub ap_name: Option<String>,
+
+    /// MAC do Access Point
+    #[serde(rename = "ap_mac")]
+    pub ap_mac: Option<String>,
+
+    /// Exemplo de campo que o UniFi usa para controle de vouchers
+    #[serde(rename = "voucher_code")]
+    pub voucher_code: Option<String>,
+
+    /// Total de bytes consumidos nesta sessão (upload + download)
+    pub bytes: Option<u64>,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ApiResponse {
+    meta: Value,
+    data: Value,
 }
 
 // Impls
@@ -167,6 +231,31 @@ impl UnifiController {
             .await?;
 
         Ok(())
+    }
+
+    pub async fn get_guest_clients(&self, site: String) -> Result<Vec<ClientInfo>, reqwest::Error> {
+        let res = self
+            .client
+            .get(format!("{}/s/{}/stat/guest", self.base_url, site))
+            .send()
+            .await?;
+
+        let res = res.json::<ApiResponse>().await?;
+        let mut list: Vec<ClientInfo> = vec![];
+
+        match res.data {
+            Value::Array(array) => {
+                let clients: Result<Vec<ClientInfo>, _> =
+                    serde_json::from_value(Value::Array(array));
+
+                if let Ok(cs) = clients {
+                    list = cs
+                }
+            }
+            _ => {}
+        }
+
+        Ok(list)
     }
 }
 
