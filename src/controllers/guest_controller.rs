@@ -39,6 +39,23 @@ pub async fn guest_register(
     Ok(Redirect::to("/guest/"))
 }
 
+#[get("/guest", format = "application/json")]
+pub async fn get_guests(
+    admin: Option<Admin>,
+    guest_repo: GuestRepository,
+) -> Result<Custom<Json<Vec<Guest>>>, Custom<Json<Error>>> {
+    if admin.is_none() {
+        return Err(Error::new_with_custom(
+            "Unauthorized user",
+            Local::now().to_string(),
+            401,
+        ));
+    }
+
+    let guests = guest_repo.find_all().await;
+    Ok(Custom(Status::Ok, Json(guests)))
+}
+
 #[post("/guest/connect", format = "application/json", data = "<guest_data>")]
 pub async fn guest_connection_request(
     cookies: &CookieJar<'_>,

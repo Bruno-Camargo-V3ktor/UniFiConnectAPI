@@ -7,7 +7,7 @@ mod utils;
 
 use controllers::admin_controller::{create_admin, delete_admin, login, update_admin};
 use controllers::approver_controller::{create_approver, delete_approver, update_approver};
-use controllers::guest_controller::{guest_connection_request, guest_register};
+use controllers::guest_controller::{get_guests, guest_connection_request, guest_register};
 use db::mongo_db::MongoDb;
 use rocket::fs::FileServer;
 use rocket::{launch, routes};
@@ -49,6 +49,7 @@ async fn start() -> _ {
         .mount("/guest", routes![guest_register])
         .mount("/api", routes![
             guest_connection_request,
+            get_guests,
             login,
             create_admin,
             update_admin,
