@@ -31,7 +31,7 @@ pub async fn check_and_update_clients_names(
     }
 }
 
-pub async fn check_and_update_guest_status(guests: &mut Vec<Guest>, clients: &Vec<ClientInfo>) {
+pub fn check_and_update_guest_status(guests: &mut Vec<Guest>, clients: &Vec<ClientInfo>) {
     for g in guests {
         if g.status != GuestStatus::Approved {
             continue;
@@ -41,7 +41,9 @@ pub async fn check_and_update_guest_status(guests: &mut Vec<Guest>, clients: &Ve
             .iter()
             .find(|c| if g.mac == c.mac { true } else { false });
 
+
         if let Some(client) = c {
+            println!( "{client:?}" );
             if client.expired.unwrap_or(true) {
                 g.status = GuestStatus::Expired;
             }

@@ -108,10 +108,12 @@ impl Repository for GuestRepository {
         let res = collection
             .update_one(
                 doc! { "_id" : ObjectId::parse_str( &entity.id ).unwrap() },
-                to_document(&entity).unwrap(),
+                doc! { "$set": to_document(&entity).unwrap() },
                 None,
             )
             .await;
+        
+        println!( "{res:?}" );
 
         if let Ok(r) = res {
             if r.modified_count != 0 {
@@ -191,9 +193,12 @@ impl<'r> FromRequest<'r> for GuestRepository {
         let mut guests = repository.find_all().await;
 
         check_and_update_clients_names(&mut unifi, &guests, &clients).await;
-        check_and_update_guest_status(&mut guests, &clients).await;
+        check_and_update_guest_status(&mut guests, &clients);
 
-        repository.save_all(guests).await;
+        for i in 0..guests.len() {
+            let r = repository.update( guests.remove(i) ).await;
+            println!( "{r:?}" );
+        }
 
         Outcome::Success(repository)
     }

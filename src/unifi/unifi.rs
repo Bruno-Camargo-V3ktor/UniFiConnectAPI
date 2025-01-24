@@ -33,7 +33,7 @@ pub struct GuestUnauthorize {
     mac: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ClientInfo {
     /// ID interno do UniFi para este registro
     #[serde(rename = "_id")]
