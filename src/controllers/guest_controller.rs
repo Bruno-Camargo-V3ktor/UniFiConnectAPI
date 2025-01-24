@@ -53,6 +53,7 @@ pub async fn get_guests(
     }
 
     let guests = guest_repo.find_all().await;
+
     Ok(Custom(Status::Ok, Json(guests)))
 }
 
@@ -76,7 +77,6 @@ pub async fn guest_connection_request(
 
             let mut guest = Guest {
                 id: String::new(),
-                active: true,
                 full_name: guest_form.full_name,
                 email: guest_form.email,
                 phone: guest_form.phone,
@@ -167,7 +167,6 @@ pub async fn guest_connection_request(
                 Ok(_) => {
                     let guest = Guest {
                         id: String::new(),
-                        active: true,
 
                         full_name: String::from("---"),
                         email: String::from("---"),

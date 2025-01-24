@@ -42,7 +42,6 @@ pub struct GuestInfo {
 pub struct Guest {
     #[serde(rename = "_id", with = "serde_object_id")]
     pub id: String,
-    pub active: bool,
 
     pub full_name: String,
     pub email: String,

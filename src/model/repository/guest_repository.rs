@@ -1,5 +1,10 @@
 use super::Repository;
-use crate::{db::mongo_db::MongoDb, model::entity::guest::Guest};
+use crate::{
+    db::mongo_db::MongoDb,
+    model::entity::guest::Guest,
+    unifi::unifi::UnifiController,
+    utils::guest_utils::{check_and_update_clients_names, check_and_update_guest_status},
+};
 use bson::{Document, doc, oid::ObjectId, to_document};
 use rocket::request::{FromRequest, Outcome, Request};
 use rocket_db_pools::{Connection, mongodb::Database};
@@ -176,10 +181,23 @@ impl<'r> FromRequest<'r> for GuestRepository {
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let db = request.guard::<Connection<MongoDb>>().await.unwrap();
+        let mut unifi = request.guard::<UnifiController>().await.unwrap();
+
         let repository = GuestRepository {
             database: db.default_database().unwrap(),
             name: "Guests".to_string(),
         };
+
+        let clients = unifi
+            .get_guest_clients("default".to_string())
+            .await
+            .unwrap();
+        let mut guests = repository.find_all().await;
+
+        check_and_update_clients_names(&mut unifi, &guests, &clients).await;
+        check_and_update_guest_status(&mut guests, &clients).await;
+
+        repository.save_all(guests).await;
 
         Outcome::Success(repository)
     }
