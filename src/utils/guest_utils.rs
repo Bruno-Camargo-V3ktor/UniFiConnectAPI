@@ -42,7 +42,7 @@ pub async fn check_and_update_guest_status(guests: &mut Vec<Guest>, clients: &Ve
             .find(|c| if g.mac == c.mac { true } else { false });
 
         if let Some(client) = c {
-            if client.authorized.unwrap_or(false) == false {
+            if client.expired.unwrap_or(true) {
                 g.status = GuestStatus::Expired;
             }
         }

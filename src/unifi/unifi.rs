@@ -52,7 +52,7 @@ pub struct ClientInfo {
     pub hostname: Option<String>,
 
     /// Indica se o cliente está ou não autorizado no portal
-    pub authorized: Option<bool>,
+    pub expired: Option<bool>,
 
     /// True se for tratado como convidado
     #[serde(rename = "is_guest")]
