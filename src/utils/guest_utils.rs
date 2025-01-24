@@ -16,6 +16,7 @@ pub struct GuestMonitoring {
 }
 
 // Impls
+#[allow(unused)]
 impl GuestMonitoring {
     pub fn new(sites: Vec<String>, database: Database, unifi: UnifiController) -> Self {
         Self {

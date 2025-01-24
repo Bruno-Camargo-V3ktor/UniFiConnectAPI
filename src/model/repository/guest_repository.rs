@@ -1,10 +1,5 @@
 use super::Repository;
-use crate::{
-    db::mongo_db::MongoDb,
-    model::entity::guest::Guest,
-    unifi::unifi::UnifiController,
-    utils::guest_utils::{check_and_update_clients_names, check_and_update_guest_status},
-};
+use crate::{db::mongo_db::MongoDb, model::entity::guest::Guest};
 use bson::{Document, doc, oid::ObjectId, to_document};
 use rocket::{
     futures::TryStreamExt,

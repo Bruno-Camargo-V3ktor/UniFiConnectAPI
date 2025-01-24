@@ -12,13 +12,21 @@ use db::mongo_db::MongoDb;
 use rocket::fs::FileServer;
 use rocket::{launch, routes};
 use rocket_db_pools::Database;
+use rocket_db_pools::mongodb::Client;
 use unifi::unifi::UnifiController;
 
-use tokio::sync::Mutex;
+use rocket::tokio::{
+    self,
+    sync::Mutex,
+    time::{self, Duration},
+};
 
 use dotenv::dotenv;
 use std::env;
 use std::sync::Arc;
+use utils::guest_utils::GuestMonitoring;
+
+///////////////////////////////////////////
 
 #[launch]
 async fn start() -> _ {
@@ -34,6 +42,23 @@ async fn start() -> _ {
 
     // Trying to login to the Unifi Controller
     let _ = unifi.authentication_api().await;
+
+    // Creating monitoring that will happen in X time to align with UniFi information
+    let clone_unifi = unifi.clone();
+    tokio::spawn(async move {
+        let client = Client::with_uri_str(env::var("DATABASE_URL").unwrap())
+            .await
+            .unwrap();
+        let db = client.default_database().unwrap();
+        let mut monitoring = GuestMonitoring::new(vec!["default".to_string()], db, clone_unifi);
+
+        let mut interval = time::interval(Duration::from_secs(60));
+        loop {
+            interval.tick().await;
+            println!("Teste");
+            monitoring.all().await;
+        }
+    });
 
     rocket::build()
         .attach(MongoDb::init())
