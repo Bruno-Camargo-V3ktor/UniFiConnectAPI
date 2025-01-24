@@ -6,7 +6,10 @@ use crate::{
     utils::guest_utils::{check_and_update_clients_names, check_and_update_guest_status},
 };
 use bson::{Document, doc, oid::ObjectId, to_document};
-use rocket::{futures::TryStreamExt, request::{FromRequest, Outcome, Request}};
+use rocket::{
+    futures::TryStreamExt,
+    request::{FromRequest, Outcome, Request},
+};
 use rocket_db_pools::{Connection, mongodb::Database};
 
 // Structs
@@ -112,8 +115,8 @@ impl Repository for GuestRepository {
                 None,
             )
             .await;
-        
-        println!( "{res:?}" );
+
+        println!("{res:?}");
 
         if let Ok(r) = res {
             if r.modified_count != 0 {
@@ -179,27 +182,11 @@ impl<'r> FromRequest<'r> for GuestRepository {
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let db = request.guard::<Connection<MongoDb>>().await.unwrap();
-        let mut unifi = request.guard::<UnifiController>().await.unwrap();
 
         let repository = GuestRepository {
             database: db.default_database().unwrap(),
             name: "Guests".to_string(),
         };
-
-        let clients = unifi
-            .get_guest_clients("default".to_string())
-            .await
-            .unwrap();
-        let mut guests = repository.find_all().await;
-
-        check_and_update_clients_names(&mut unifi, &guests, &clients).await;
-        check_and_update_guest_status(&mut guests, &clients);
-
-        for i in 0..guests.len() {
-            let r = repository.update( guests.remove(i) ).await;
-            println!( "{r:?}" );
-        }
-
         Outcome::Success(repository)
     }
 }

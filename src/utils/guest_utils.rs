@@ -6,7 +6,6 @@ use crate::{
     unifi::unifi::{ClientInfo, UnifiController},
 };
 
-use bson::doc;
 use rocket_db_pools::mongodb::Database;
 
 // Struct
