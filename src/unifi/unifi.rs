@@ -51,6 +51,8 @@ pub struct ClientInfo {
     /// Hostname do dispositivo
     pub hostname: Option<String>,
 
+    pub oui: Option<String>,
+
     /// Indica se o cliente está ou não autorizado no portal
     pub expired: Option<bool>,
 

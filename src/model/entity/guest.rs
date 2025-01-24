@@ -52,6 +52,9 @@ pub struct Guest {
     pub site: String,
     pub status: GuestStatus,
 
+    pub hostname: Option<String>,
+    pub oui: Option<String>,
+
     pub time_connection: String,
     pub start_time: DateTime<Local>,
     pub approver: String,
