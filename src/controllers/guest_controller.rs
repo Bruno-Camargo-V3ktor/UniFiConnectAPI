@@ -100,6 +100,7 @@ pub async fn guest_connection_request(
                     ));
                 }
 
+                guest.status = GuestStatus::Approved;
                 guest.approver = approver.unwrap();
                 let res = unifi.authorize_guest(&site, &mac, &minutes).await;
                 match res {

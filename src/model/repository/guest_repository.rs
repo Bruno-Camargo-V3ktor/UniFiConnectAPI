@@ -6,7 +6,7 @@ use crate::{
     utils::guest_utils::{check_and_update_clients_names, check_and_update_guest_status},
 };
 use bson::{Document, doc, oid::ObjectId, to_document};
-use rocket::request::{FromRequest, Outcome, Request};
+use rocket::{futures::TryStreamExt, request::{FromRequest, Outcome, Request}};
 use rocket_db_pools::{Connection, mongodb::Database};
 
 // Structs
@@ -26,19 +26,16 @@ impl Repository for GuestRepository {
         let res = collection.find(query, None).await;
 
         match res {
-            Ok(mut c) => {
+            Ok(mut cursor) => {
                 let mut entitys = vec![];
-                while let Ok(_) = c.advance().await {
-                    let e = c.deserialize_current().unwrap();
+                while let Ok(Some(e)) = cursor.try_next().await {
                     entitys.push(e);
                 }
 
                 entitys
             }
 
-            Err(_) => {
-                vec![]
-            }
+            Err(_) => vec![],
         }
     }
 
@@ -69,10 +66,9 @@ impl Repository for GuestRepository {
         let res = collection.find(doc! {}, None).await;
 
         match res {
-            Ok(mut op) => {
+            Ok(mut cursor) => {
                 let mut entitys = vec![];
-                while let Ok(_) = op.advance().await {
-                    let e = op.deserialize_current().unwrap();
+                while let Ok(Some(e)) = cursor.try_next().await {
                     entitys.push(e);
                 }
 
