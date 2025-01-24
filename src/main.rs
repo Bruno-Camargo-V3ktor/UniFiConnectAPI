@@ -60,16 +60,17 @@ async fn start() -> _ {
         }
     });
 
+    // Rocket Server
     rocket::build()
         .attach(MongoDb::init())
         .manage(Arc::new(Mutex::new(unifi)))
         .mount(
             "/guest",
-            FileServer::from(env::var("GUEST_LOGIN_PAGE").unwrap()),
+            FileServer::from(env::var("GUEST_DIR_PAGE").unwrap()),
         )
         .mount(
             "/admin",
-            FileServer::from(env::var("ADMIN_LOGIN_PAGE").unwrap()),
+            FileServer::from(env::var("ADMIN_DIR_PAGE").unwrap()),
         )
         .mount("/guest", routes![guest_register])
         .mount("/api", routes![
