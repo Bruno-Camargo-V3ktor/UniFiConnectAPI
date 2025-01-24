@@ -10,7 +10,7 @@ pub enum GuestData {
     Form(GuestForm),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum GuestStatus {
     Approved,
     Pending,
