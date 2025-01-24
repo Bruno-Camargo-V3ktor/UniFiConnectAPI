@@ -85,6 +85,8 @@ pub async fn guest_connection_request(
                 approver: "---".to_string(),
                 status: GuestStatus::Pending,
                 mac: mac.clone(),
+                hostname: None,
+                oui: None,
                 time_connection: minutes.to_string(),
                 start_time: Local::now(),
             };
@@ -182,6 +184,9 @@ pub async fn guest_connection_request(
                         },
                         mac: guest_info.mac,
                         site: guest_info.site,
+
+                        hostname: None,
+                        oui: None,
 
                         time_connection: guest_info.minutes.to_string(),
                         start_time: Local::now(),
