@@ -1,9 +1,6 @@
 use chrono::Local;
-use rocket::http::{CookieJar, Status};
-use rocket::response::{
-    Redirect,
-    status::{BadRequest, Custom},
-};
+use rocket::http::CookieJar;
+use rocket::response::Redirect;
 use rocket::serde::json::Json;
 use rocket::{get, post};
 
@@ -14,7 +11,8 @@ use crate::model::repository::approver_repository::ApproverRepository;
 use crate::model::repository::guest_repository::GuestRepository;
 use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiController;
-use crate::utils::error::Error;
+use crate::utils::error::{CustomError, Error, Unauthorized};
+use crate::utils::responses::{CustomStatus, Ok, Response};
 
 // ENDPOINTS
 #[get("/s/<site>?<ap>&<id>&<t>&<url>&<ssid>", format = "text/html")]
@@ -26,7 +24,7 @@ pub async fn guest_register(
     t: String,
     url: String,
     ssid: String,
-) -> Result<Redirect, BadRequest<Json<Error>>> {
+) -> Result<Redirect, ()> {
     // /guest/s/default/?ap=70:a7:41:dd:7a:78&id=4c:eb:42:9b:82:55&t=1734714029&url=http://www.msftconnecttest.com%2Fredirect&ssid=Wi-Fi_Visitantes%20
 
     cookies.add(("ap", ap.clone()));
@@ -43,18 +41,14 @@ pub async fn guest_register(
 pub async fn get_guests(
     admin: Option<Admin>,
     guest_repo: GuestRepository,
-) -> Result<Custom<Json<Vec<Guest>>>, Custom<Json<Error>>> {
+) -> Result<Ok<Vec<Guest>>, Unauthorized> {
     if admin.is_none() {
-        return Err(Error::new_with_custom(
-            "Unauthorized user",
-            Local::now().to_string(),
-            401,
-        ));
+        return Err(Error::new_unauthorized("Unauthorized user"));
     }
 
     let guests = guest_repo.find_all().await;
 
-    Ok(Custom(Status::Ok, Json(guests)))
+    Ok(Response::new_ok(guests))
 }
 
 #[post("/guest/connect", format = "application/json", data = "<guest_data>")]
@@ -65,7 +59,7 @@ pub async fn guest_connection_request(
     mut unifi: UnifiController,
     guest_data: Json<GuestData>,
     admin: Option<Admin>,
-) -> Result<Status, Custom<Json<Error>>> {
+) -> Result<CustomStatus, CustomError> {
     let guest_data = guest_data.into_inner();
 
     match guest_data {
@@ -88,11 +82,7 @@ pub async fn guest_connection_request(
             if let Some(code) = guest_form.au_code {
                 let approver = validate_code(code, &approver_repository).await;
                 if approver.is_none() {
-                    return Err(Error::new_with_custom(
-                        "Invalid Fields",
-                        Local::now().to_string(),
-                        400,
-                    ));
+                    return Err(Error::new_bad_request("Invalid Fields"));
                 }
 
                 guest.status = GuestStatus::Approved;
@@ -105,22 +95,18 @@ pub async fn guest_connection_request(
                     Err(_) => {}
                 }
 
-                return Ok(Status::Accepted);
+                return Ok(Response::new_custom_status(202));
             }
 
             // Approval pending
             let _ = repository.save(guest).await;
-            return Ok(Status::Ok);
+            return Ok(Response::new_custom_status(200));
         }
 
         // API Call
         GuestData::Info(guest_info) => {
             if admin.is_none() {
-                return Err(Error::new_with_custom(
-                    "Unauthorized user",
-                    Local::now().to_string(),
-                    401,
-                ));
+                return Err(Error::new_unauthorized("Unauthorized user"));
             }
 
             // Approving a pending order
@@ -141,7 +127,7 @@ pub async fn guest_connection_request(
 
                         repository.update(g).await;
 
-                        return Ok(Status::Ok);
+                        return Ok(Response::new_custom_status(200));
                     }
                 }
 
@@ -177,7 +163,7 @@ pub async fn guest_connection_request(
                 Err(_) => {}
             }
 
-            Ok(Status::Ok)
+            Ok(Response::new_custom_status(200))
         }
     }
 }
