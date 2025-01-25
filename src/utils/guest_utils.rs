@@ -40,8 +40,12 @@ impl GuestMonitoring {
             }
             let clients = res.unwrap();
 
-            self.check_and_update_guest_status(&mut guests, &clients);
+            self.check_and_update_guest_fields(&mut guests, &clients);
             self.check_and_update_clients_names(&guests, &clients).await;
+
+            for i in 0..guests.len() {
+                let r = self.repo.update(guests.remove(i)).await;
+            }
         }
     }
 
@@ -71,7 +75,7 @@ impl GuestMonitoring {
         }
     }
 
-    pub fn check_and_update_guest_status(
+    pub fn check_and_update_guest_fields(
         &self,
         guests: &mut Vec<Guest>,
         clients: &Vec<ClientInfo>,
@@ -86,9 +90,16 @@ impl GuestMonitoring {
                 .find(|c| if g.mac == c.mac { true } else { false });
 
             if let Some(client) = c {
-                println!("{client:?}");
                 if client.expired.unwrap_or(true) {
                     g.status = GuestStatus::Expired;
+                }
+
+                if client.hostname.is_some() {
+                    g.hostname = client.hostname.clone();
+                }
+
+                if client.oui.is_some() {
+                    g.oui = client.oui.clone();
                 }
             }
         }

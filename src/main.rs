@@ -55,7 +55,6 @@ async fn start() -> _ {
         let mut interval = time::interval(Duration::from_secs(60));
         loop {
             interval.tick().await;
-            println!("Teste");
             monitoring.all().await;
         }
     });
