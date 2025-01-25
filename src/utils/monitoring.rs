@@ -100,6 +100,14 @@ impl GuestMonitoring {
                 if client.oui.is_some() {
                     g.oui = client.oui.clone();
                 }
+
+                if client.rx_bytes.is_some() {
+                    g.rx_bytes = client.rx_bytes.clone();
+                }
+
+                if client.tx_bytes.is_some() {
+                    g.tx_bytes = client.tx_bytes.clone();
+                }
             }
         }
     }

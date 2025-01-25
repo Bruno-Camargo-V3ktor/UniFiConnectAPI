@@ -92,6 +92,10 @@ pub struct ClientInfo {
 
     /// Total de bytes consumidos nesta sessão (upload + download)
     pub bytes: Option<u64>,
+
+    pub tx_bytes: Option<usize>,
+
+    pub rx_bytes: Option<usize>,
 }
 
 #[derive(Serialize, Deserialize)]
