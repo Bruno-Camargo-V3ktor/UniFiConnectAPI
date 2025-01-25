@@ -7,6 +7,7 @@ mod utils;
 
 use controllers::admin_controller::{create_admin, delete_admin, login, update_admin};
 use controllers::approver_controller::{create_approver, delete_approver, update_approver};
+use controllers::error_controller::handles;
 use controllers::guest_controller::{get_guests, guest_connection_request, guest_register};
 use db::mongo_db::MongoDb;
 use rocket::fs::FileServer;
@@ -63,6 +64,7 @@ async fn start() -> _ {
     rocket::build()
         .attach(MongoDb::init())
         .manage(Arc::new(Mutex::new(unifi)))
+        .register("/api", handles())
         .mount(
             "/guest",
             FileServer::from(env::var("GUEST_DIR_PAGE").unwrap()),
