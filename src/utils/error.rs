@@ -1,7 +1,13 @@
+use chrono::Local;
 use rocket::{
     response::status::Custom,
     serde::{Deserialize, Serialize, json::Json},
 };
+
+// Types
+pub type CustomError = Custom<Json<Error>>;
+pub type Unauthorized = Custom<Json<Error>>;
+pub type BadRequest = Custom<Json<Error>>;
 
 // Structs
 #[derive(Serialize, Deserialize)]
@@ -21,5 +27,17 @@ impl Error {
         };
 
         Custom(rocket::http::Status { code: status }, Json(error))
+    }
+
+    pub fn new_unauthorized(msg: &str) -> Custom<Json<Self>> {
+        Self::new_with_custom(msg, Local::now().to_string(), 401)
+    }
+
+    pub fn new_bad_request(msg: &str) -> Custom<Json<Self>> {
+        Self::new_with_custom(msg, Local::now().to_string(), 400)
+    }
+
+    pub fn new_not_found(msg: &str) -> Custom<Json<Self>> {
+        Self::new_with_custom(msg, Local::now().to_string(), 404)
     }
 }
