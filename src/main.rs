@@ -24,7 +24,7 @@ use rocket::tokio::{
 use dotenv::dotenv;
 use std::env;
 use std::sync::Arc;
-use utils::guest_utils::GuestMonitoring;
+use utils::monitoring::GuestMonitoring;
 
 ///////////////////////////////////////////
 
