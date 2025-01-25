@@ -75,21 +75,14 @@ pub async fn guest_connection_request(
             let site = cookies.get("site").unwrap().value().to_string();
             let minutes: u16 = 180;
 
-            let mut guest = Guest {
-                id: String::new(),
-                full_name: guest_form.full_name,
-                email: guest_form.email,
-                phone: guest_form.phone,
-                cpf: guest_form.cpf,
-                site: site.clone(),
-                approver: "---".to_string(),
-                status: GuestStatus::Pending,
-                mac: mac.clone(),
-                hostname: None,
-                oui: None,
-                time_connection: minutes.to_string(),
-                start_time: Local::now(),
-            };
+            let mut guest = Guest::new();
+            guest.full_name = guest_form.full_name;
+            guest.email = guest_form.email;
+            guest.phone = guest_form.phone;
+            guest.cpf = guest_form.cpf;
+            guest.site = site.clone();
+            guest.mac = mac.clone();
+            guest.time_connection = minutes.to_string();
 
             // Approval by code
             if let Some(code) = guest_form.au_code {
@@ -168,28 +161,15 @@ pub async fn guest_connection_request(
 
             match res {
                 Ok(_) => {
-                    let guest = Guest {
-                        id: String::new(),
-
-                        full_name: String::from("---"),
-                        email: String::from("---"),
-                        phone: String::from("---"),
-                        cpf: String::from("---"),
-
-                        approver: admin.unwrap().name,
-                        status: if guest_info.approved {
-                            GuestStatus::Approved
-                        } else {
-                            GuestStatus::Reject
-                        },
-                        mac: guest_info.mac,
-                        site: guest_info.site,
-
-                        hostname: None,
-                        oui: None,
-
-                        time_connection: guest_info.minutes.to_string(),
-                        start_time: Local::now(),
+                    let mut guest = Guest::new();
+                    guest.mac = guest_info.mac;
+                    guest.site = guest_info.site;
+                    guest.approver = admin.unwrap().name;
+                    guest.time_connection = guest_info.minutes.to_string();
+                    guest.status = if guest_info.approved {
+                        GuestStatus::Approved
+                    } else {
+                        GuestStatus::Reject
                     };
 
                     let _ = repository.save(guest).await;

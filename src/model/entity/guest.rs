@@ -54,8 +54,33 @@ pub struct Guest {
 
     pub hostname: Option<String>,
     pub oui: Option<String>,
+    pub tx_bytes: Option<usize>,
+    pub rx_bytes: Option<usize>,
 
     pub time_connection: String,
     pub start_time: DateTime<Local>,
     pub approver: String,
+}
+
+// Impls
+impl Guest {
+    pub fn new() -> Self {
+        Self {
+            id: String::new(),
+            full_name: String::from("---"),
+            email: String::from("---"),
+            phone: String::from("---"),
+            cpf: String::from("---"),
+            mac: String::from("---"),
+            site: String::from("---"),
+            status: GuestStatus::Pending,
+            hostname: None,
+            oui: None,
+            tx_bytes: None,
+            rx_bytes: None,
+            time_connection: String::from("0"),
+            start_time: Local::now(),
+            approver: String::from("---"),
+        }
+    }
 }
