@@ -24,6 +24,14 @@ pub struct ApproverData {
     pub secrete_code: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ApproverUpdate {
+    pub username: Option<String>,
+    pub email: Option<String>,
+    pub password: Option<String>,
+    pub secrete_code: Option<String>,
+}
+
 // Impls
 impl Approver {
     pub fn create_validity(&mut self) {
