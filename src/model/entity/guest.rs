@@ -1,4 +1,4 @@
-use crate::db::mongo_db::serde_object_id;
+use crate::{db::mongo_db::serde_object_id, utils::validator::Validator};
 use chrono::{DateTime, Local};
 use rocket::serde::{Deserialize, Serialize};
 
@@ -82,5 +82,13 @@ impl Guest {
             start_time: Local::now(),
             approver: String::from("---"),
         }
+    }
+}
+
+impl GuestForm {
+    pub fn validate_form(&self) -> bool {
+        Validator::validate_phone(&self.phone)
+            && Validator::validate_email(&self.email)
+            && Validator::validate_cpf(&self.cpf)
     }
 }
