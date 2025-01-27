@@ -1,5 +1,7 @@
+use std::env;
+
 use crate::db::mongo_db::serde_object_id;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Duration, Local, TimeZone};
 use rocket::serde::{Deserialize, Serialize};
 
 // Struct
@@ -20,4 +22,25 @@ pub struct ApproverData {
     pub email: String,
     pub password: String,
     pub secrete_code: String,
+}
+
+// Impls
+impl Approver {
+    pub fn create_validity(&mut self) {
+        let days = env::var("VALIDITY_DAYS_APPROVAL_CODE")
+            .expect("VALIDITY_DAYS_APPROVAL_CODE NOT DEFINED")
+            .parse::<i64>()
+            .expect("VALIDITY_DAYS_APPROVAL_CODE NOT NUMBER");
+
+        let date = Local::now()
+            .checked_add_signed(Duration::days(days))
+            .expect("Error creating expiration date")
+            .date_naive()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+
+        let validity_date = Local.from_local_datetime(&date).unwrap();
+
+        self.validity = Some(validity_date);
+    }
 }
