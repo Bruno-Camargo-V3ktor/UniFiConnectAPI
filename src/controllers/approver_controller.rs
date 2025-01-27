@@ -36,6 +36,7 @@ pub async fn create_approver(
         validity: None,
         secrete_code: approver.secrete_code,
     };
+    approver.create_validity();
 
     let _ = repository.save(approver).await;
 
@@ -74,6 +75,7 @@ pub async fn update_approver(
     approver.secrete_code = {
         if let Some(s) = approver_data.secrete_code {
             hash(s.as_str(), DEFAULT_COST).unwrap();
+            approver.create_validity();
         }
         approver.secrete_code.clone()
     };
