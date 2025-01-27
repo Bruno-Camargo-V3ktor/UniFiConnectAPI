@@ -1,3 +1,5 @@
+use regex::Regex;
+
 // Structs
 pub struct Validator;
 
@@ -60,5 +62,10 @@ impl Validator {
         }
 
         digits.iter().collect::<String>() == cpf.clone()
+    }
+
+    pub fn validate_email(email: &String) -> bool {
+        let email_regex = Regex::new(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$").unwrap();
+        email_regex.is_match(email.as_str())
     }
 }
