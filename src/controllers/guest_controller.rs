@@ -62,6 +62,10 @@ pub async fn guest_connection_request(
     match guest_data {
         // Form Call
         GuestData::Form(guest_form) => {
+            if !guest_form.validate_form() {
+                return Err(Error::new_bad_request("Invalid Form Field(s)"));
+            }
+
             let mac = cookies.get("id").unwrap().value().to_string();
             let site = cookies.get("site").unwrap().value().to_string();
             let minutes: u16 = 180;
