@@ -1,4 +1,7 @@
+use std::env;
+
 use chrono::Local;
+use rocket::fs::NamedFile;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
@@ -15,6 +18,14 @@ use crate::utils::error::{CustomError, Error, Unauthorized};
 use crate::utils::responses::{CustomStatus, Ok, Response};
 
 // ENDPOINTS
+#[get("/<_..>")]
+pub async fn guest_page() -> Result<NamedFile, ()> {
+    let mut path = env::var("STATIC_FILES_DIR").expect("STATIC_FILES_DIR NOT DEFINED");
+    path.push_str("/guest/index.html");
+
+    Ok(NamedFile::open(path).await.expect("Guest Page Not Found"))
+}
+
 #[get("/s/<site>?<ap>&<id>&<t>&<url>&<ssid>", format = "text/html")]
 pub async fn guest_register(
     cookies: &CookieJar<'_>,
@@ -35,20 +46,6 @@ pub async fn guest_register(
     cookies.add(("url", url.clone()));
 
     Ok(Redirect::to("/guest/"))
-}
-
-#[get("/guest", format = "application/json")]
-pub async fn get_guests(
-    admin: Option<Admin>,
-    guest_repo: GuestRepository,
-) -> Result<Ok<Vec<Guest>>, Unauthorized> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
-    let guests = guest_repo.find_all().await;
-
-    Ok(Response::new_ok(guests))
 }
 
 #[post("/guest/connect", format = "application/json", data = "<guest_data>")]
@@ -166,4 +163,18 @@ pub async fn guest_connection_request(
             Ok(Response::new_custom_status(200))
         }
     }
+}
+
+#[get("/guest", format = "application/json")]
+pub async fn get_guests(
+    admin: Option<Admin>,
+    guest_repo: GuestRepository,
+) -> Result<Ok<Vec<Guest>>, Unauthorized> {
+    if admin.is_none() {
+        return Err(Error::new_unauthorized("Unauthorized user"));
+    }
+
+    let guests = guest_repo.find_all().await;
+
+    Ok(Response::new_ok(guests))
 }

@@ -5,26 +5,26 @@ mod security;
 mod unifi;
 mod utils;
 
-use controllers::admin_controller::{create_admin, delete_admin, login, update_admin};
+use controllers::admin_controller::{admin_page, create_admin, delete_admin, login, update_admin};
 use controllers::approver_controller::{create_approver, delete_approver, update_approver};
 use controllers::error_controller::handles;
-use controllers::guest_controller::{get_guests, guest_connection_request, guest_register};
+use controllers::guest_controller::{
+    get_guests, guest_connection_request, guest_page, guest_register,
+};
 use db::mongo_db::MongoDb;
+use dotenv::dotenv;
 use rocket::fs::FileServer;
-use rocket::{launch, routes};
-use rocket_db_pools::Database;
-use rocket_db_pools::mongodb::Client;
-use unifi::unifi::UnifiController;
-
 use rocket::tokio::{
     self,
     sync::Mutex,
     time::{self, Duration},
 };
-
-use dotenv::dotenv;
+use rocket::{launch, routes};
+use rocket_db_pools::Database;
+use rocket_db_pools::mongodb::Client;
 use std::env;
 use std::sync::Arc;
+use unifi::unifi::UnifiController;
 use utils::monitoring::GuestMonitoring;
 
 ///////////////////////////////////////////
@@ -63,17 +63,19 @@ async fn start() -> _ {
     // Rocket Server
     rocket::build()
         .attach(MongoDb::init())
+        //
         .manage(Arc::new(Mutex::new(unifi)))
+        //
         .register("/api", handles())
+        //
         .mount(
-            "/guest",
-            FileServer::from(env::var("GUEST_DIR_PAGE").unwrap()),
+            "/static",
+            FileServer::from(env::var("STATIC_FILES_DIR").unwrap()),
         )
-        .mount(
-            "/admin",
-            FileServer::from(env::var("ADMIN_DIR_PAGE").unwrap()),
-        )
-        .mount("/guest", routes![guest_register])
+        .mount("/admin", routes![admin_page])
+        //
+        .mount("/guest", routes![guest_register, guest_page])
+        //
         .mount("/api", routes![
             guest_connection_request,
             get_guests,

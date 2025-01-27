@@ -1,8 +1,11 @@
+use std::env;
+
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
 use rocket::fairing::Result;
+use rocket::fs::NamedFile;
 use rocket::serde::json::Json;
-use rocket::{delete, post, put};
+use rocket::{delete, get, post, put};
 
 use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
 use crate::model::repository::Repository;
@@ -12,6 +15,14 @@ use crate::utils::error::{BadRequest, CustomError, Error, Unauthorized};
 use crate::utils::responses::{Accepted, Created, Ok, Response};
 
 // ENDPOINTS
+#[get("/<_..>")]
+pub async fn admin_page() -> Result<NamedFile, ()> {
+    let mut path = env::var("STATIC_FILES_DIR").expect("STATIC_FILES_DIR NOT DEFINED");
+    path.push_str("/admin/index.html");
+
+    Ok(NamedFile::open(path).await.expect("Admin Page Not Found"))
+}
+
 #[post("/admin/login", data = "<data>")]
 pub async fn login(
     data: Json<AdminLogin>,
