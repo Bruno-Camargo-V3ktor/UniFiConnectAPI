@@ -5,12 +5,10 @@ mod security;
 mod unifi;
 mod utils;
 
-use controllers::admin_controller::{admin_page, create_admin, delete_admin, login, update_admin};
-use controllers::approver_controller::{create_approver, delete_approver, update_approver};
+use controllers::admin_controller::{self, admin_page};
+use controllers::approver_controller;
 use controllers::error_controller::handles;
-use controllers::guest_controller::{
-    get_guests, guest_connection_request, guest_page, guest_register,
-};
+use controllers::guest_controller::{self, guest_page, guest_register};
 use db::mongo_db::MongoDb;
 use dotenv::dotenv;
 use rocket::fs::FileServer;
@@ -19,7 +17,7 @@ use rocket::tokio::{
     sync::Mutex,
     time::{self, Duration},
 };
-use rocket::{launch, routes};
+use rocket::{Route, launch, routes};
 use rocket_db_pools::Database;
 use rocket_db_pools::mongodb::Client;
 use std::env;
@@ -73,18 +71,14 @@ async fn start() -> _ {
             FileServer::from(env::var("STATIC_FILES_DIR").unwrap()),
         )
         .mount("/admin", routes![admin_page])
-        //
         .mount("/guest", routes![guest_register, guest_page])
-        //
-        .mount("/api", routes![
-            guest_connection_request,
-            get_guests,
-            login,
-            create_admin,
-            update_admin,
-            delete_admin,
-            create_approver,
-            update_approver,
-            delete_approver
-        ])
+        .mount("/api", api_routes())
+}
+
+pub fn api_routes() -> Vec<Route> {
+    let mut routes = guest_controller::routes();
+    routes.append(&mut admin_controller::routes());
+    routes.append(&mut approver_controller::routes());
+
+    routes
 }

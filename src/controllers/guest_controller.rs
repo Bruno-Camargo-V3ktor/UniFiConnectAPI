@@ -5,7 +5,7 @@ use rocket::fs::NamedFile;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
-use rocket::{get, post};
+use rocket::{Route, get, post, routes};
 
 use crate::model::entity::admin::Admin;
 use crate::model::entity::guest::{Guest, GuestData, GuestStatus};
@@ -177,4 +177,9 @@ pub async fn get_guests(
     let guests = guest_repo.find_all().await;
 
     Ok(Response::new_ok(guests))
+}
+
+// Functions
+pub fn routes() -> Vec<Route> {
+    routes![guest_connection_request, get_guests]
 }

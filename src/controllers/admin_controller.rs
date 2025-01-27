@@ -5,7 +5,7 @@ use bson::doc;
 use rocket::fairing::Result;
 use rocket::fs::NamedFile;
 use rocket::serde::json::Json;
-use rocket::{delete, get, post, put};
+use rocket::{Route, delete, get, post, put, routes};
 
 use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
 use crate::model::repository::Repository;
@@ -116,4 +116,9 @@ pub async fn delete_admin(
     let _ = repository.delete_by_id(id).await;
 
     Ok(Response::new_ok(()))
+}
+
+// Functions
+pub fn routes() -> Vec<Route> {
+    routes![login, create_admin, update_admin, delete_admin]
 }

@@ -12,7 +12,7 @@ use crate::{
     },
 };
 use bcrypt::{DEFAULT_COST, hash};
-use rocket::{delete, post, put, serde::json::Json};
+use rocket::{Route, delete, post, put, routes, serde::json::Json};
 
 #[post("/approver", data = "<data>")]
 pub async fn create_approver(
@@ -69,4 +69,9 @@ pub async fn delete_approver(
     let _ = repository.delete_by_id(id).await;
 
     Ok(Response::new_ok(()))
+}
+
+// Functions
+pub fn routes() -> Vec<Route> {
+    routes![create_approver, update_approver, delete_approver]
 }
