@@ -43,7 +43,7 @@ impl GuestMonitoring {
             self.check_and_update_clients_names(&guests, &clients).await;
 
             for i in 0..guests.len() {
-                let r = self.repo.update(guests.remove(i)).await;
+                let r = self.repo.update(guests.remove(0)).await;
             }
         }
     }
@@ -95,10 +95,6 @@ impl GuestMonitoring {
 
                 if client.hostname.is_some() {
                     g.hostname = client.hostname.clone();
-                }
-
-                if client.oui.is_some() {
-                    g.oui = client.oui.clone();
                 }
 
                 if client.rx_bytes.is_some() {

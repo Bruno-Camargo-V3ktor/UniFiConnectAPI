@@ -53,7 +53,6 @@ pub struct Guest {
     pub status: GuestStatus,
 
     pub hostname: Option<String>,
-    pub oui: Option<String>,
     pub tx_bytes: Option<usize>,
     pub rx_bytes: Option<usize>,
 
@@ -75,7 +74,6 @@ impl Guest {
             site: String::from("---"),
             status: GuestStatus::Pending,
             hostname: None,
-            oui: None,
             tx_bytes: None,
             rx_bytes: None,
             time_connection: String::from("0"),

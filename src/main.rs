@@ -34,9 +34,9 @@ async fn start() -> _ {
 
     // Creating an instance of the Configuration and Request Structure to the Unifi Controller
     let mut unifi = UnifiController::new(
-        env::var("UNIFI_CONTROLLER_URL").unwrap(),
-        env::var("UNIFI_USER").unwrap(),
-        env::var("UNIFI_PASSWORD").unwrap(),
+        env::var("UNIFI_CONTROLLER_URL").expect("UNIFI_CONTROLLER_URL NOT DEFINED"),
+        env::var("UNIFI_USER").expect("UNIFI_USER NOT DEFINED"),
+        env::var("UNIFI_PASSWORD").expect("UNIFI_PASSWORD NOT DEFINED"),
     );
 
     // Trying to login to the Unifi Controller
@@ -45,9 +45,10 @@ async fn start() -> _ {
     // Creating monitoring that will happen in X time to align with UniFi information
     let clone_unifi = unifi.clone();
     tokio::spawn(async move {
-        let client = Client::with_uri_str(env::var("DATABASE_URL").unwrap())
-            .await
-            .unwrap();
+        let client =
+            Client::with_uri_str(env::var("DATABASE_URL").expect("DATABASE_URL NOT DEFINED"))
+                .await
+                .unwrap();
         let db = client.default_database().unwrap();
         let mut monitoring = GuestMonitoring::new(vec!["default".to_string()], db, clone_unifi);
 
@@ -68,7 +69,7 @@ async fn start() -> _ {
         //
         .mount(
             "/static",
-            FileServer::from(env::var("STATIC_FILES_DIR").unwrap()),
+            FileServer::from(env::var("STATIC_FILES_DIR").expect("STATIC_FILES_DIR NOT DEFINED")),
         )
         .mount("/admin", routes![admin_page])
         .mount("/guest", routes![guest_register, guest_page])

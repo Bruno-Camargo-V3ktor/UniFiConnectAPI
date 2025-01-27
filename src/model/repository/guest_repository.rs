@@ -111,8 +111,6 @@ impl Repository for GuestRepository {
             )
             .await;
 
-        println!("{res:?}");
-
         if let Ok(r) = res {
             if r.modified_count != 0 {
                 return Some(entity);
