@@ -26,11 +26,14 @@ pub async fn create_approver(
 
     let mut approver = data.into_inner();
     approver.secrete_code = hash(approver.secrete_code.as_str(), DEFAULT_COST).unwrap();
+    approver.password = hash(approver.password.as_str(), DEFAULT_COST).unwrap();
 
     let approver = Approver {
         id: String::new(),
         username: approver.username,
         email: approver.email,
+        password: approver.password,
+        validity: None,
         secrete_code: approver.secrete_code,
     };
 
