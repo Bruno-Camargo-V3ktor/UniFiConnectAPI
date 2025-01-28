@@ -118,7 +118,25 @@ pub async fn delete_admin(
     Ok(Response::new_ok(()))
 }
 
+#[get("/admin")]
+pub async fn get_admins(
+    repository: AdminRepository,
+    admin: Option<Admin>,
+) -> Result<Ok<Vec<Admin>>, Unauthorized> {
+    if admin.is_none() {
+        return Err(Error::new_unauthorized("Unauthorized user"));
+    }
+
+    let mut entites = repository.find_all().await;
+    for i in 0..entites.len() {
+        let e = entites.get_mut(i).unwrap();
+        e.password = None;
+    }
+
+    Ok(Response::new_ok(entites))
+}
+
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![login, create_admin, update_admin, delete_admin]
+    routes![login, create_admin, update_admin, delete_admin, get_admins]
 }
