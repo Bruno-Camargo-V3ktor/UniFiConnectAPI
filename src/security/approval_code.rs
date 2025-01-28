@@ -12,7 +12,7 @@ pub async fn validate_code(code: String, repository: &ApproverRepository) -> Opt
         if let Some(date) = validity_date {
             if now > date {
                 continue;
-            }
+            }   
         }
 
         let res = verify(&code, ap.secrete_code.as_str());

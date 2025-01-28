@@ -41,6 +41,8 @@ impl Approver {
             .parse::<i64>()
             .expect("VALIDITY_DAYS_APPROVAL_CODE NOT NUMBER");
 
+        if days <= 0 { return; }
+
         let date = Local::now()
             .checked_add_signed(Duration::days(days))
             .expect("Error creating expiration date")
