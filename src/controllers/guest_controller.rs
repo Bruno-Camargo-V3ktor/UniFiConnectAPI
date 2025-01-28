@@ -5,7 +5,7 @@ use rocket::fs::NamedFile;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
-use rocket::{Route, get, post, routes};
+use rocket::{Route, get, post, put, routes};
 
 use crate::model::entity::admin::Admin;
 use crate::model::entity::guest::{Guest, GuestData, GuestStatus};
@@ -183,7 +183,21 @@ pub async fn get_guests(
     Ok(Response::new_ok(guests))
 }
 
+#[put("/guest", format = "application/json", data = "<data>")]
+pub async fn update_guest(
+    admin: Option<Admin>,
+    guest_repo: GuestRepository,
+    data: Json<Guest>,
+) -> Result<Ok<()>, Unauthorized> {
+    if admin.is_none() {
+        return Err(Error::new_unauthorized("Unauthorized user"));
+    }
+
+    let _ = guest_repo.update(data.into_inner()).await;
+    Ok(Response::new_ok(()))
+}
+
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![guest_connection_request, get_guests]
+    routes![guest_connection_request, get_guests, update_guest]
 }
