@@ -90,13 +90,31 @@ pub async fn update_admin(
         return Err(Error::new_unauthorized("Unauthorized user"));
     }
 
-    let mut admin = data.into_inner();
+    let mut admin = admin.unwrap();
+    let admin_data = data.into_inner();
 
+    if !admin_data.id.is_empty() {
+        let res = repository.find_by_id(admin_data.id).await;
+        if let Some(a) = res {
+            admin = a;
+        } else {
+            return Err(Error::new_not_found("Admin User Not Found"));
+        }
+    }
+
+    admin.name = admin_data.name;
+    admin.username = {
+        let res = repository
+            .find_one(doc! { "username": admin_data.username.clone() })
+            .await;
+        match res {
+            Some(_) => return Err(Error::new_bad_request("Username already registered")),
+            None => admin_data.username,
+        }
+    };
     admin.password = match admin.password {
         Some(p) => Some(hash(p.as_str(), DEFAULT_COST).unwrap()),
-        None => {
-            return Err(Error::new_bad_request("field 'password' not found"));
-        }
+        None => admin.password.clone(),
     };
 
     let _ = repository.update(admin).await;
