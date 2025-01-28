@@ -12,7 +12,7 @@ use crate::{
     },
 };
 use bcrypt::{DEFAULT_COST, hash};
-use rocket::{Route, delete, post, put, routes, serde::json::Json};
+use rocket::{Route, delete, get, post, put, routes, serde::json::Json};
 
 #[post("/approver", data = "<data>")]
 pub async fn create_approver(
@@ -41,6 +41,25 @@ pub async fn create_approver(
     let _ = repository.save(approver).await;
 
     Ok(Response::new_created(()))
+}
+
+#[get("/approver")]
+pub async fn get_approvers(
+    admin: Option<Admin>,
+    repository: ApproverRepository,
+) -> Result<Ok<Vec<Approver>>, Unauthorized> {
+    if admin.is_none() {
+        return Err(Error::new_unauthorized("Unauthorized user"));
+    }
+
+    let mut entitys = repository.find_all().await;
+    for i in 0..entitys.len() {
+        let e = entitys.get_mut(i).unwrap();
+        e.password = String::from("");
+        e.secrete_code = String::from("");
+    }
+
+    Ok(Response::new_ok(entitys))
 }
 
 #[put("/approver", data = "<data>")]
@@ -102,5 +121,10 @@ pub async fn delete_approver(
 
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![create_approver, update_approver, delete_approver]
+    routes![
+        create_approver,
+        update_approver,
+        delete_approver,
+        get_approvers
+    ]
 }
