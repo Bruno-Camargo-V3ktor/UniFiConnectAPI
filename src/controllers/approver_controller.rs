@@ -12,6 +12,7 @@ use crate::{
     },
 };
 use bcrypt::{DEFAULT_COST, hash};
+use bson::doc;
 use rocket::{Route, delete, get, post, put, routes, serde::json::Json};
 
 #[post("/approver", data = "<data>")]
@@ -25,6 +26,15 @@ pub async fn create_approver(
     }
 
     let mut approver = data.into_inner();
+
+    let res = repository
+        .find_one(doc! { "username": approver.username.clone() })
+        .await;
+    match res {
+        Some(_) => return Err(Error::new_bad_request("Username already registered")),
+        None => {}
+    }
+
     approver.secrete_code = hash(approver.secrete_code.as_str(), DEFAULT_COST).unwrap();
     approver.password = hash(approver.password.as_str(), DEFAULT_COST).unwrap();
 
@@ -84,13 +94,26 @@ pub async fn update_approver(
     }
 
     approver.email = approver_data.email.unwrap_or(approver.email.clone());
-    approver.username = approver_data.username.unwrap_or(approver.username.clone());
+
+    if let Some(u) = approver_data.username {
+        if approver.username != u {
+            let res = repository.find_one(doc! { "username": u.clone() }).await;
+            match res {
+                Some(_) => return Err(Error::new_bad_request("Username already registered")),
+                None => {
+                    approver.username = u;
+                }
+            }
+        }
+    }
+
     approver.password = {
         if let Some(p) = approver_data.password {
             hash(p.as_str(), DEFAULT_COST).unwrap();
         }
         approver.password.clone()
     };
+
     approver.secrete_code = {
         if let Some(s) = approver_data.secrete_code {
             hash(s.as_str(), DEFAULT_COST).unwrap();

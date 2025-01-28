@@ -61,6 +61,15 @@ pub async fn create_admin(
     }
 
     let data = data.into_inner();
+
+    let res = repository
+        .find_one(doc! { "username": data.username.clone() })
+        .await;
+    match res {
+        Some(_) => return Err(Error::new_bad_request("Username already registered")),
+        None => {}
+    }
+
     let mut new_admin = Admin {
         id: "".to_string(),
         name: data.name,
@@ -103,15 +112,19 @@ pub async fn update_admin(
     }
 
     admin.name = admin_data.name;
-    admin.username = {
-        let res = repository
-            .find_one(doc! { "username": admin_data.username.clone() })
-            .await;
-        match res {
-            Some(_) => return Err(Error::new_bad_request("Username already registered")),
-            None => admin_data.username,
-        }
-    };
+
+    if admin.username != admin_data.username {
+        admin.username = {
+            let res = repository
+                .find_one(doc! { "username": admin_data.username.clone() })
+                .await;
+            match res {
+                Some(_) => return Err(Error::new_bad_request("Username already registered")),
+                None => admin_data.username,
+            }
+        };
+    }
+
     admin.password = match admin.password {
         Some(p) => Some(hash(p.as_str(), DEFAULT_COST).unwrap()),
         None => admin.password.clone(),
