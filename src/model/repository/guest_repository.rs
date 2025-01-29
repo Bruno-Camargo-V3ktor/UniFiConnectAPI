@@ -123,7 +123,7 @@ impl Repository for GuestRepository {
     async fn update_all(&self, query: Self::Options, modify: Self::Options) -> usize {
         let collection = self.database.collection::<Self::Entity>(&self.name);
 
-        let res = collection.update_one(query, modify, None).await;
+        let res = collection.update_many(query, modify, None).await;
         match res {
             Ok(r) => r.modified_count as usize,
             Err(_) => 0,
