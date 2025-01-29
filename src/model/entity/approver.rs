@@ -67,3 +67,17 @@ impl Approver {
         self.validity = Some(validity_date);
     }
 }
+
+impl ApproverCode {
+    pub fn new(code: String) -> Self {
+        let days = env::var("VALIDITY_DAYS_APPROVAL_CODE")
+            .unwrap_or("0".to_string())
+            .parse::<usize>()
+            .expect("VALIDITY_DAYS_APPROVAL_CODE NOT NUMBER");
+        
+        Self {
+            new_code: code,
+            days: Some(days)
+        }
+    }
+}
