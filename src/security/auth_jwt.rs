@@ -29,9 +29,14 @@ pub struct Claims {
 // Functions
 pub fn create_token(user_id: &String) -> String {
     let key = env::var("ROCKET_SECRET_KEY").unwrap();
+    let hours = env::var("TOKEN_EXPERIMENT_TIME")
+        .unwrap_or("1".to_string())
+        .parse::<u64>()
+        .unwrap()
+        * 60;
 
     let expiration =
-        SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(60 * 60);
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(60 * hours);
 
     let content = Claims {
         sub: user_id.clone(),
