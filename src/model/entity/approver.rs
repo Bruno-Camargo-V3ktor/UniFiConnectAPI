@@ -25,6 +25,18 @@ pub struct ApproverData {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct ApproverLogin {
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ApproverCode {
+    pub new_code: String,
+    pub days: Option<usize>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ApproverUpdate {
     pub id: String,
     pub username: Option<String>,
