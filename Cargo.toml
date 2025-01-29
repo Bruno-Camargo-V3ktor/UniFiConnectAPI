@@ -21,3 +21,4 @@ bson = "2.13.0"
 
 jsonwebtoken = "9"
 bcrypt = "0.16"
+rand = "0.9"
