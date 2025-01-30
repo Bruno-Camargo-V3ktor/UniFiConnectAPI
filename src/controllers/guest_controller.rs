@@ -68,7 +68,10 @@ pub async fn guest_connection_request(
 
             let mac = cookies.get("id").unwrap().value().to_string();
             let site = cookies.get("site").unwrap().value().to_string();
-            let minutes: u16 = 180;
+            let minutes: u16 = env::var("DEFAULT_APPROVAL_TIME")
+                .unwrap_or("180".to_string())
+                .parse()
+                .expect("DEFAULT_APPROVAL_TIME NOT NUMBER");
 
             let mut guest = Guest::new();
             guest.full_name = guest_form.full_name;

@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::{
     model::{
         entity::{
@@ -134,6 +136,10 @@ pub async fn generator_approver_code(
     data: Json<ApproverLogin>,
     repository: ApproverRepository,
 ) -> Result<Ok<ApproverCode>, BadRequest> {
+    let code_size = env::var("APPROVAL_CODE_SIZE")
+        .unwrap_or("8".to_string())
+        .parse::<u8>()
+        .expect("APPROVAL_CODE_SIZE NOT NUMBER");
     let op_approver = repository
         .find_one(doc! {
             "username" : data.username.clone()
@@ -149,7 +155,7 @@ pub async fn generator_approver_code(
                 }
             }
 
-            let new_code = generator::generator_code(8);
+            let new_code = generator::generator_code(code_size);
             approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
             approver.create_validity();
 
