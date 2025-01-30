@@ -4,13 +4,15 @@ use crate::{
             admin::Admin,
             approver::{Approver, ApproverCode, ApproverData, ApproverLogin, ApproverUpdate},
         },
-        repository::{approver_repository::ApproverRepository, Repository},
+        repository::{Repository, approver_repository::ApproverRepository},
     },
     utils::{
-        error::{BadRequest, CustomError, Error, Unauthorized}, generator, responses::{Created, Ok, Response}
+        error::{BadRequest, CustomError, Error, Unauthorized},
+        generator,
+        responses::{Created, Ok, Response},
     },
 };
-use bcrypt::{hash, verify, DEFAULT_COST};
+use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
 use rocket::{Route, delete, get, post, put, routes, serde::json::Json};
 
@@ -52,7 +54,6 @@ pub async fn create_approver(
     Ok(Response::new_created(()))
 }
 
-
 #[get("/approver")]
 pub async fn get_approvers(
     admin: Option<Admin>,
@@ -71,7 +72,6 @@ pub async fn get_approvers(
 
     Ok(Response::new_ok(entitys))
 }
-
 
 #[put("/approver", data = "<data>")]
 pub async fn update_approver(
@@ -128,21 +128,25 @@ pub async fn update_approver(
     Ok(Response::new_ok(()))
 }
 
-
-#[put("/approver/code", data="<data>") ]
+#[put("/approver/code", data = "<data>")]
 pub async fn generator_approver_code(
+    admin: Option<Admin>,
     data: Json<ApproverLogin>,
-    repository: ApproverRepository
+    repository: ApproverRepository,
 ) -> Result<Ok<ApproverCode>, BadRequest> {
-    let op_approver = repository.find_one( doc!{
-        "username" : data.username.clone()
-    } ).await;
+    let op_approver = repository
+        .find_one(doc! {
+            "username" : data.username.clone()
+        })
+        .await;
 
     match op_approver {
         Some(mut approver) => {
-            let ok = verify(data.password.clone(), approver.password.as_str()).unwrap_or(false);
-            if !ok {
-                return Err( Error::new_bad_request("Invalid username or password") );
+            if let None = admin {
+                let ok = verify(data.password.clone(), approver.password.as_str()).unwrap_or(false);
+                if !ok {
+                    return Err(Error::new_bad_request("Invalid username or password"));
+                }
             }
 
             let new_code = generator::generator_code(8);
@@ -150,15 +154,12 @@ pub async fn generator_approver_code(
             approver.create_validity();
 
             let _ = repository.update(approver).await;
-            Ok( Response::new_ok( ApproverCode::new(new_code) ) )
+            Ok(Response::new_ok(ApproverCode::new(new_code)))
         }
 
-        None => Err( Error::new_bad_request("Invalid username or password") )
-        
+        None => Err(Error::new_bad_request("Invalid username or password")),
     }
-
 }
-
 
 #[delete("/approver/<id>")]
 pub async fn delete_approver(
@@ -174,7 +175,6 @@ pub async fn delete_approver(
 
     Ok(Response::new_ok(()))
 }
-
 
 // Functions
 pub fn routes() -> Vec<Route> {
