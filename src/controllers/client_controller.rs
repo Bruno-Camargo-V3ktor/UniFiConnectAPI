@@ -8,10 +8,10 @@ use rocket::serde::json::Json;
 use rocket::{Route, get, post, put, routes};
 
 use crate::model::entity::admin::Admin;
-use crate::model::entity::guest::{Guest, GuestData, GuestStatus};
+use crate::model::entity::client::{Client, ClientData, ClientStatus};
 use crate::model::repository::Repository;
 use crate::model::repository::approver_repository::ApproverRepository;
-use crate::model::repository::guest_repository::GuestRepository;
+use crate::model::repository::client_repository::ClientRepository;
 use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiController;
 use crate::utils::error::{CustomError, Error, Unauthorized};
@@ -19,15 +19,17 @@ use crate::utils::responses::{CustomStatus, Ok, Response};
 
 // ENDPOINTS
 #[get("/<_..>")]
-pub async fn guest_page() -> Result<NamedFile, ()> {
+pub async fn client_connect_page() -> Result<NamedFile, ()> {
     let mut path = env::var("STATIC_FILES_DIR").expect("STATIC_FILES_DIR NOT DEFINED");
-    path.push_str("/guest/index.html");
+    path.push_str("/client/index.html");
 
-    Ok(NamedFile::open(path).await.expect("Guest Page Not Found"))
+    Ok(NamedFile::open(path)
+        .await
+        .expect("Client Connect Page Not Found"))
 }
 
 #[get("/s/<site>?<ap>&<id>&<t>&<url>&<ssid>", format = "text/html")]
-pub async fn guest_register(
+pub async fn client_register(
     cookies: &CookieJar<'_>,
     site: String,
     ap: String,
@@ -36,7 +38,7 @@ pub async fn guest_register(
     url: String,
     ssid: String,
 ) -> Result<Redirect, ()> {
-    // /guest/s/default/?ap=70:a7:41:dd:7a:78&id=4c:eb:42:9b:82:55&t=1734714029&url=http://www.msftconnecttest.com%2Fredirect&ssid=Wi-Fi_Visitantes%20
+    // /client/s/default/?ap=70:a7:41:dd:7a:78&id=4c:eb:42:9b:82:55&t=1734714029&url=http://www.msftconnecttest.com%2Fredirect&ssid=Wi-Fi_Visitantes%20
 
     cookies.add(("ap", ap.clone()));
     cookies.add(("id", id.clone()));
@@ -45,24 +47,24 @@ pub async fn guest_register(
     cookies.add(("site", site.clone()));
     cookies.add(("url", url.clone()));
 
-    Ok(Redirect::to("/guest/"))
+    Ok(Redirect::to("/client/"))
 }
 
-#[post("/guest/connect", format = "application/json", data = "<guest_data>")]
-pub async fn guest_connection_request(
+#[post("/client/connect", format = "application/json", data = "<client_data>")]
+pub async fn client_connection_request(
     cookies: &CookieJar<'_>,
-    repository: GuestRepository,
+    repository: ClientRepository,
     approver_repository: ApproverRepository,
     mut unifi: UnifiController,
-    guest_data: Json<GuestData>,
+    client_data: Json<ClientData>,
     admin: Option<Admin>,
 ) -> Result<CustomStatus, CustomError> {
-    let guest_data = guest_data.into_inner();
+    let client_data = client_data.into_inner();
 
-    match guest_data {
+    match client_data {
         // Form Call
-        GuestData::Form(guest_form) => {
-            if !guest_form.validate_form() {
+        ClientData::Form(client_form) => {
+            if !client_form.validate_form() {
                 return Err(Error::new_bad_request("Invalid Form Field(s)"));
             }
 
@@ -73,28 +75,28 @@ pub async fn guest_connection_request(
                 .parse()
                 .expect("DEFAULT_APPROVAL_TIME NOT NUMBER");
 
-            let mut guest = Guest::new();
-            guest.full_name = guest_form.full_name;
-            guest.email = guest_form.email;
-            guest.phone = guest_form.phone;
-            guest.cpf = guest_form.cpf;
-            guest.site = site.clone();
-            guest.mac = mac.clone();
-            guest.time_connection = minutes.to_string();
+            let mut client = Client::new();
+            client.full_name = client_form.full_name;
+            client.email = client_form.email;
+            client.phone = client_form.phone;
+            client.cpf = client_form.cpf;
+            client.site = site.clone();
+            client.mac = mac.clone();
+            client.time_connection = minutes.to_string();
 
             // Approval by code
-            if let Some(code) = guest_form.au_code {
+            if let Some(code) = client_form.au_code {
                 let approver = validate_code(code, &approver_repository).await;
                 if approver.is_none() {
                     return Err(Error::new_bad_request("Invalid Fields"));
                 }
 
-                guest.status = GuestStatus::Approved;
-                guest.approver = approver.unwrap();
-                let res = unifi.authorize_guest(&site, &mac, &minutes).await;
+                client.status = ClientStatus::Approved;
+                client.approver = approver.unwrap();
+                let res = unifi.authorize_device(&site, &mac, &minutes).await;
                 match res {
                     Ok(_) => {
-                        let _ = repository.save(guest).await;
+                        let _ = repository.save(client).await;
                     }
                     Err(_) => {}
                 }
@@ -103,33 +105,33 @@ pub async fn guest_connection_request(
             }
 
             // Approval pending
-            let _ = repository.save(guest).await;
+            let _ = repository.save(client).await;
             return Ok(Response::new_custom_status(200));
         }
 
         // API Call
-        GuestData::Info(guest_info) => {
+        ClientData::Info(client_info) => {
             if admin.is_none() {
                 return Err(Error::new_unauthorized("Unauthorized user"));
             }
 
             // Approving a pending order
-            match guest_info.id {
+            match client_info.id {
                 Some(id) => {
-                    if let Some(mut g) = repository.find_by_id(id).await {
-                        if guest_info.approved {
-                            g.approver = admin.unwrap().name;
-                            g.status = GuestStatus::Approved;
-                            g.start_time = Local::now();
+                    if let Some(mut c) = repository.find_by_id(id).await {
+                        if client_info.approved {
+                            c.approver = admin.unwrap().name;
+                            c.status = ClientStatus::Approved;
+                            c.start_time = Local::now();
 
                             let _ = unifi
-                                .authorize_guest(&g.site, &g.mac, &guest_info.minutes)
+                                .authorize_device(&c.site, &c.mac, &client_info.minutes)
                                 .await;
                         } else {
-                            g.status = GuestStatus::Reject;
+                            c.status = ClientStatus::Reject;
                         }
 
-                        repository.update(g).await;
+                        repository.update(c).await;
 
                         return Ok(Response::new_custom_status(200));
                     }
@@ -139,30 +141,30 @@ pub async fn guest_connection_request(
             }
 
             // Direct approval
-            let res = if guest_info.approved {
+            let res = if client_info.approved {
                 unifi
-                    .authorize_guest(&guest_info.site, &guest_info.mac, &guest_info.minutes)
+                    .authorize_device(&client_info.site, &client_info.mac, &client_info.minutes)
                     .await
             } else {
                 unifi
-                    .unauthorize_guest(&guest_info.site, &guest_info.mac)
+                    .unauthorize_device(&client_info.site, &client_info.mac)
                     .await
             };
 
             match res {
                 Ok(_) => {
-                    let mut guest = Guest::new();
-                    guest.mac = guest_info.mac;
-                    guest.site = guest_info.site;
-                    guest.approver = admin.unwrap().name;
-                    guest.time_connection = guest_info.minutes.to_string();
-                    guest.status = if guest_info.approved {
-                        GuestStatus::Approved
+                    let mut client = Client::new();
+                    client.mac = client_info.mac;
+                    client.site = client_info.site;
+                    client.approver = admin.unwrap().name;
+                    client.time_connection = client_info.minutes.to_string();
+                    client.status = if client_info.approved {
+                        ClientStatus::Approved
                     } else {
-                        GuestStatus::Reject
+                        ClientStatus::Reject
                     };
 
-                    let _ = repository.save(guest).await;
+                    let _ = repository.save(client).await;
                 }
                 Err(_) => {}
             }
@@ -172,35 +174,35 @@ pub async fn guest_connection_request(
     }
 }
 
-#[get("/guest", format = "application/json")]
-pub async fn get_guests(
+#[get("/client", format = "application/json")]
+pub async fn get_clients(
     admin: Option<Admin>,
-    guest_repo: GuestRepository,
-) -> Result<Ok<Vec<Guest>>, Unauthorized> {
+    client_repo: ClientRepository,
+) -> Result<Ok<Vec<Client>>, Unauthorized> {
     if admin.is_none() {
         return Err(Error::new_unauthorized("Unauthorized user"));
     }
 
-    let guests = guest_repo.find_all().await;
+    let clients = client_repo.find_all().await;
 
-    Ok(Response::new_ok(guests))
+    Ok(Response::new_ok(clients))
 }
 
-#[put("/guest", format = "application/json", data = "<data>")]
-pub async fn update_guest(
+#[put("/client", format = "application/json", data = "<data>")]
+pub async fn update_client(
     admin: Option<Admin>,
-    guest_repo: GuestRepository,
-    data: Json<Guest>,
+    client_repo: ClientRepository,
+    data: Json<Client>,
 ) -> Result<Ok<()>, Unauthorized> {
     if admin.is_none() {
         return Err(Error::new_unauthorized("Unauthorized user"));
     }
 
-    let _ = guest_repo.update(data.into_inner()).await;
+    let _ = client_repo.update(data.into_inner()).await;
     Ok(Response::new_ok(()))
 }
 
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![guest_connection_request, get_guests, update_guest]
+    routes![client_connection_request, get_clients, update_client]
 }

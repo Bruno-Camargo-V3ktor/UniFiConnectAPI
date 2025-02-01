@@ -1,7 +1,7 @@
 // Mods
 pub mod admin_repositoy;
 pub mod approver_repository;
-pub mod guest_repository;
+pub mod client_repository;
 
 // Traits
 #[allow(unused)]

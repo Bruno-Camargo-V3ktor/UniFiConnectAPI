@@ -6,8 +6,8 @@ mod unifi;
 mod utils;
 
 use controllers::admin_controller::{self, admin_page};
+use controllers::client_controller::{self, client_connect_page, client_register};
 use controllers::error_controller::handles;
-use controllers::guest_controller::{self, guest_page, guest_register};
 use controllers::{approver_controller, config_controller};
 use db::mongo_db::MongoDb;
 use dotenv::dotenv;
@@ -23,7 +23,7 @@ use rocket_db_pools::mongodb::Client;
 use std::env;
 use std::sync::Arc;
 use unifi::unifi::UnifiController;
-use utils::monitoring::GuestMonitoring;
+use utils::monitoring::ClientsMonitoring;
 
 ///////////////////////////////////////////
 
@@ -50,7 +50,7 @@ async fn start() -> _ {
                 .await
                 .unwrap();
         let db = client.default_database().unwrap();
-        let mut monitoring = GuestMonitoring::new(vec!["default".to_string()], db, clone_unifi);
+        let mut monitoring = ClientsMonitoring::new(vec!["default".to_string()], db, clone_unifi);
 
         let mut interval = time::interval(Duration::from_secs(60));
         loop {
@@ -72,12 +72,12 @@ async fn start() -> _ {
             FileServer::from(env::var("STATIC_FILES_DIR").expect("STATIC_FILES_DIR NOT DEFINED")),
         )
         .mount("/admin", routes![admin_page])
-        .mount("/guest", routes![guest_register, guest_page])
+        .mount("/client", routes![client_register, client_connect_page])
         .mount("/api", api_routes())
 }
 
 pub fn api_routes() -> Vec<Route> {
-    let mut routes = guest_controller::routes();
+    let mut routes = client_controller::routes();
     routes.append(&mut admin_controller::routes());
     routes.append(&mut approver_controller::routes());
     routes.append(&mut config_controller::routes());

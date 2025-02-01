@@ -5,13 +5,13 @@ use rocket::serde::{Deserialize, Serialize};
 // Enums
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
-pub enum GuestData {
-    Info(GuestInfo),
-    Form(GuestForm),
+pub enum ClientData {
+    Info(ClientInfo),
+    Form(ClientForm),
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-pub enum GuestStatus {
+pub enum ClientStatus {
     Approved,
     Pending,
     Reject,
@@ -20,7 +20,7 @@ pub enum GuestStatus {
 
 // Structs
 #[derive(Serialize, Deserialize, Debug)]
-pub struct GuestForm {
+pub struct ClientForm {
     pub full_name: String,
     pub email: String,
     pub phone: String,
@@ -30,7 +30,7 @@ pub struct GuestForm {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct GuestInfo {
+pub struct ClientInfo {
     pub id: Option<String>,
     pub mac: String,
     pub site: String,
@@ -39,7 +39,7 @@ pub struct GuestInfo {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Guest {
+pub struct Client {
     #[serde(rename = "_id", with = "serde_object_id")]
     pub id: String,
 
@@ -50,7 +50,7 @@ pub struct Guest {
 
     pub mac: String,
     pub site: String,
-    pub status: GuestStatus,
+    pub status: ClientStatus,
 
     pub hostname: Option<String>,
     pub tx_bytes: Option<usize>,
@@ -62,7 +62,7 @@ pub struct Guest {
 }
 
 // Impls
-impl Guest {
+impl Client {
     pub fn new() -> Self {
         Self {
             id: String::new(),
@@ -72,7 +72,7 @@ impl Guest {
             cpf: String::from("---"),
             mac: String::from("---"),
             site: String::from("---"),
-            status: GuestStatus::Pending,
+            status: ClientStatus::Pending,
             hostname: None,
             tx_bytes: None,
             rx_bytes: None,
@@ -83,7 +83,7 @@ impl Guest {
     }
 }
 
-impl GuestForm {
+impl ClientForm {
     pub fn validate_form(&self) -> bool {
         Validator::validate_phone(&self.phone)
             && Validator::validate_email(&self.email)

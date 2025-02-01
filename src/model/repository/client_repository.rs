@@ -1,5 +1,5 @@
 use super::Repository;
-use crate::{db::mongo_db::MongoDb, model::entity::guest::Guest};
+use crate::{db::mongo_db::MongoDb, model::entity::client::Client};
 use bson::{Document, doc, oid::ObjectId, to_document};
 use rocket::{
     futures::TryStreamExt,
@@ -8,15 +8,15 @@ use rocket::{
 use rocket_db_pools::{Connection, mongodb::Database};
 
 // Structs
-pub struct GuestRepository {
+pub struct ClientRepository {
     pub database: Database,
     pub name: String,
 }
 
 // Impls
-impl Repository for GuestRepository {
+impl Repository for ClientRepository {
     type Id = String;
-    type Entity = Guest;
+    type Entity = Client;
     type Options = Document;
 
     async fn find(&self, query: Self::Options) -> Vec<Self::Entity> {
@@ -170,15 +170,15 @@ impl Repository for GuestRepository {
 
 // Guards
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for GuestRepository {
+impl<'r> FromRequest<'r> for ClientRepository {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let db = request.guard::<Connection<MongoDb>>().await.unwrap();
 
-        let repository = GuestRepository {
+        let repository = ClientRepository {
             database: db.default_database().unwrap(),
-            name: "Guests".to_string(),
+            name: "Clients".to_string(),
         };
         Outcome::Success(repository)
     }

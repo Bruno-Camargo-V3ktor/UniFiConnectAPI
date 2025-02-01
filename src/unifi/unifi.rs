@@ -21,20 +21,20 @@ pub struct UnifiController {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GuestAuthorization {
+pub struct DeviceAuthorization {
     cmd: String,
     mac: Option<String>,
     minutes: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GuestUnauthorize {
+pub struct DeviceUnauthorize {
     cmd: String,
     mac: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ClientInfo {
+pub struct DeviceInfo {
     /// ID interno do UniFi para este registro
     #[serde(rename = "_id")]
     pub record_id: Option<String>,
@@ -105,7 +105,7 @@ pub struct ApiResponse {
 }
 
 // Impls
-impl GuestAuthorization {
+impl DeviceAuthorization {
     pub fn new(mac: String, minutes: u16) -> Self {
         Self {
             cmd: String::from("authorize-guest"),
@@ -115,7 +115,7 @@ impl GuestAuthorization {
     }
 }
 
-impl GuestUnauthorize {
+impl DeviceUnauthorize {
     pub fn new(mac: String) -> Self {
         Self {
             cmd: String::from("unauthorize-guest"),
@@ -177,7 +177,7 @@ impl UnifiController {
         }
     }
 
-    pub async fn authorize_guest(
+    pub async fn authorize_device(
         &mut self,
         site: &String,
         mac: &String,
@@ -187,7 +187,7 @@ impl UnifiController {
             let _ = self.authentication_api().await?;
         }
 
-        let body = GuestAuthorization::new(mac.to_string(), *minutes);
+        let body = DeviceAuthorization::new(mac.to_string(), *minutes);
 
         let _res = self
             .client
@@ -199,7 +199,7 @@ impl UnifiController {
         Ok(())
     }
 
-    pub async fn unauthorize_guest(
+    pub async fn unauthorize_device(
         &mut self,
         site: &String,
         mac: &String,
@@ -208,7 +208,7 @@ impl UnifiController {
             let _ = self.authentication_api().await?;
         }
 
-        let body = GuestUnauthorize::new(mac.to_string());
+        let body = DeviceUnauthorize::new(mac.to_string());
 
         let _res = self
             .client
@@ -220,7 +220,7 @@ impl UnifiController {
         Ok(())
     }
 
-    pub async fn rename_device_client(
+    pub async fn rename_device(
         &mut self,
         id: String,
         site: String,
@@ -241,7 +241,7 @@ impl UnifiController {
         Ok(())
     }
 
-    pub async fn get_guest_clients(&self, site: String) -> Result<Vec<ClientInfo>, reqwest::Error> {
+    pub async fn get_guest_devices(&self, site: String) -> Result<Vec<DeviceInfo>, reqwest::Error> {
         let res = self
             .client
             .get(format!("{}/s/{}/stat/guest", self.base_url, site))
@@ -249,11 +249,11 @@ impl UnifiController {
             .await?;
 
         let res = res.json::<ApiResponse>().await?;
-        let mut list: Vec<ClientInfo> = vec![];
+        let mut list: Vec<DeviceInfo> = vec![];
 
         match res.data {
             Value::Array(array) => {
-                let clients: Result<Vec<ClientInfo>, _> =
+                let clients: Result<Vec<DeviceInfo>, _> =
                     serde_json::from_value(Value::Array(array));
 
                 if let Ok(cs) = clients {
