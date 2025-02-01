@@ -8,7 +8,7 @@ use rocket::serde::json::Json;
 use rocket::{Route, get, post, put, routes};
 
 use crate::model::entity::admin::Admin;
-use crate::model::entity::client::{Client, ClientData, ClientStatus};
+use crate::model::entity::client::{Client, ClientForm, ClientInfo, ClientStatus};
 use crate::model::repository::Repository;
 use crate::model::repository::approver_repository::ApproverRepository;
 use crate::model::repository::client_repository::ClientRepository;
@@ -50,128 +50,122 @@ pub async fn client_register(
     Ok(Redirect::to("/client/"))
 }
 
-#[post("/client/connect", format = "application/json", data = "<client_data>")]
-pub async fn client_connection_request(
+#[post("/client/connect", format = "application/json", data = "<data>")]
+pub async fn client_connection_api(
+    mut unifi: UnifiController,
+    repository: ClientRepository,
+    data: Json<ClientInfo>,
+    admin: Option<Admin>,
+) -> Result<CustomStatus, CustomError> {
+    if admin.is_none() {
+        return Err(Error::new_unauthorized("Unauthorized user"));
+    }
+    let client = data.into_inner();
+
+    // Approving a pending order
+    if let Some(id) = client.id {
+        if let Some(mut c) = repository.find_by_id(id).await {
+            if client.approved {
+                c.approver = admin.unwrap().name;
+                c.status = ClientStatus::Approved;
+                c.start_time = Local::now();
+
+                let _ = unifi
+                    .authorize_device(&c.site, &c.mac, &client.minutes)
+                    .await;
+            } else {
+                c.status = ClientStatus::Reject;
+            }
+
+            repository.update(c).await;
+
+            return Ok(Response::new_custom_status(200));
+        }
+    }
+
+    // Direct approval
+    let res = if client.approved {
+        unifi
+            .authorize_device(&client.site, &client.mac, &client.minutes)
+            .await
+    } else {
+        unifi.unauthorize_device(&client.site, &client.mac).await
+    };
+
+    match res {
+        Ok(_) => {
+            let mut new_client = Client::new();
+            new_client.mac = client.mac;
+            new_client.site = client.site;
+            new_client.approver = admin.unwrap().name;
+            new_client.time_connection = client.minutes.to_string();
+            new_client.status = if client.approved {
+                ClientStatus::Approved
+            } else {
+                ClientStatus::Reject
+            };
+
+            let _ = repository.save(new_client).await;
+        }
+        Err(_) => {}
+    }
+
+    Ok(Response::new_custom_status(200))
+}
+
+#[post("/client/connect?form", format = "application/json", data = "<data>")]
+pub async fn client_connection_approver(
+    mut unifi: UnifiController,
     cookies: &CookieJar<'_>,
     repository: ClientRepository,
     approver_repository: ApproverRepository,
-    mut unifi: UnifiController,
-    client_data: Json<ClientData>,
-    admin: Option<Admin>,
+    data: Json<ClientForm>,
 ) -> Result<CustomStatus, CustomError> {
-    let client_data = client_data.into_inner();
+    let client = data.into_inner();
 
-    match client_data {
-        // Form Call
-        ClientData::Form(client_form) => {
-            if !client_form.validate_form() {
-                return Err(Error::new_bad_request("Invalid Form Field(s)"));
-            }
-
-            let mac = cookies.get("id").unwrap().value().to_string();
-            let site = cookies.get("site").unwrap().value().to_string();
-            let minutes: u16 = env::var("DEFAULT_APPROVAL_TIME")
-                .unwrap_or("180".to_string())
-                .parse()
-                .expect("DEFAULT_APPROVAL_TIME NOT NUMBER");
-
-            let mut client = Client::new();
-            client.full_name = client_form.full_name;
-            client.email = client_form.email;
-            client.phone = client_form.phone;
-            client.cpf = client_form.cpf;
-            client.site = site.clone();
-            client.mac = mac.clone();
-            client.time_connection = minutes.to_string();
-
-            // Approval by code
-            if let Some(code) = client_form.au_code {
-                let approver = validate_code(code, &approver_repository).await;
-                if approver.is_none() {
-                    return Err(Error::new_bad_request("Invalid Fields"));
-                }
-
-                client.status = ClientStatus::Approved;
-                client.approver = approver.unwrap();
-                let res = unifi.authorize_device(&site, &mac, &minutes).await;
-                match res {
-                    Ok(_) => {
-                        let _ = repository.save(client).await;
-                    }
-                    Err(_) => {}
-                }
-
-                return Ok(Response::new_custom_status(202));
-            }
-
-            // Approval pending
-            let _ = repository.save(client).await;
-            return Ok(Response::new_custom_status(200));
-        }
-
-        // API Call
-        ClientData::Info(client_info) => {
-            if admin.is_none() {
-                return Err(Error::new_unauthorized("Unauthorized user"));
-            }
-
-            // Approving a pending order
-            match client_info.id {
-                Some(id) => {
-                    if let Some(mut c) = repository.find_by_id(id).await {
-                        if client_info.approved {
-                            c.approver = admin.unwrap().name;
-                            c.status = ClientStatus::Approved;
-                            c.start_time = Local::now();
-
-                            let _ = unifi
-                                .authorize_device(&c.site, &c.mac, &client_info.minutes)
-                                .await;
-                        } else {
-                            c.status = ClientStatus::Reject;
-                        }
-
-                        repository.update(c).await;
-
-                        return Ok(Response::new_custom_status(200));
-                    }
-                }
-
-                _ => {}
-            }
-
-            // Direct approval
-            let res = if client_info.approved {
-                unifi
-                    .authorize_device(&client_info.site, &client_info.mac, &client_info.minutes)
-                    .await
-            } else {
-                unifi
-                    .unauthorize_device(&client_info.site, &client_info.mac)
-                    .await
-            };
-
-            match res {
-                Ok(_) => {
-                    let mut client = Client::new();
-                    client.mac = client_info.mac;
-                    client.site = client_info.site;
-                    client.approver = admin.unwrap().name;
-                    client.time_connection = client_info.minutes.to_string();
-                    client.status = if client_info.approved {
-                        ClientStatus::Approved
-                    } else {
-                        ClientStatus::Reject
-                    };
-
-                    let _ = repository.save(client).await;
-                }
-                Err(_) => {}
-            }
-
-            Ok(Response::new_custom_status(200))
-        }
+    if !client.validate_form() {
+        return Err(Error::new_bad_request("Invalid Form Field(s)"));
     }
+
+    let mac = cookies.get("id").unwrap().value().to_string();
+    let site = cookies.get("site").unwrap().value().to_string();
+    let minutes: u16 = env::var("DEFAULT_APPROVAL_TIME")
+        .unwrap_or("180".to_string())
+        .parse()
+        .expect("DEFAULT_APPROVAL_TIME NOT NUMBER");
+
+    let mut new_client = Client::new();
+    new_client.full_name = client.full_name;
+    new_client.email = client.email;
+    new_client.phone = client.phone;
+    new_client.cpf = client.cpf;
+    new_client.site = site.clone();
+    new_client.mac = mac.clone();
+    new_client.time_connection = minutes.to_string();
+
+    // Approval by code
+    if let Some(code) = client.au_code {
+        let approver = validate_code(code, &approver_repository).await;
+        if approver.is_none() {
+            return Err(Error::new_bad_request("Invalid Fields"));
+        }
+
+        new_client.status = ClientStatus::Approved;
+        new_client.approver = approver.unwrap();
+        let res = unifi.authorize_device(&site, &mac, &minutes).await;
+        match res {
+            Ok(_) => {
+                let _ = repository.save(new_client).await;
+            }
+            Err(_) => {}
+        }
+
+        return Ok(Response::new_custom_status(202));
+    }
+
+    // Approval pending
+    let _ = repository.save(new_client).await;
+    return Ok(Response::new_custom_status(200));
 }
 
 #[get("/client", format = "application/json")]
@@ -204,5 +198,10 @@ pub async fn update_client(
 
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![client_connection_request, get_clients, update_client]
+    routes![
+        client_connection_api,
+        client_connection_approver,
+        get_clients,
+        update_client
+    ]
 }
