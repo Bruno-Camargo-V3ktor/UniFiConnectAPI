@@ -12,7 +12,13 @@ impl Validator {
         phone.chars().all(|c| c.is_numeric())
     }
 
-    pub fn validate_cpf(cpf: &String) -> bool {
+    pub fn validate_cpf(cpf: &Option<String>) -> bool {
+        let cpf = if cpf.is_some() {
+            cpf.clone().unwrap()
+        } else {
+            return true;
+        };
+
         if cpf.len() != 11 {
             return false;
         }

@@ -8,7 +8,7 @@ use rocket::serde::json::Json;
 use rocket::{Route, get, post, put, routes};
 
 use crate::model::entity::admin::Admin;
-use crate::model::entity::client::{Client, ClientForm, ClientInfo, ClientStatus};
+use crate::model::entity::client::{Client, ClientData, ClientInfo, ClientStatus};
 use crate::model::repository::Repository;
 use crate::model::repository::approver_repository::ApproverRepository;
 use crate::model::repository::client_repository::ClientRepository;
@@ -63,9 +63,9 @@ pub async fn client_connection_api(
     let client = data.into_inner();
 
     // Approving a pending order
-    if let Some(id) = client.id {
+    if let Some(id) = client.id.clone() {
         if let Some(mut c) = repository.find_by_id(id).await {
-            if client.approved {
+            if client.connect {
                 c.approver = admin.unwrap().name;
                 c.status = ClientStatus::Approved;
                 c.start_time = Local::now();
@@ -84,7 +84,7 @@ pub async fn client_connection_api(
     }
 
     // Direct approval
-    let res = if client.approved {
+    let res = if client.connect {
         unifi
             .authorize_device(&client.site, &client.mac, &client.minutes)
             .await
@@ -94,16 +94,8 @@ pub async fn client_connection_api(
 
     match res {
         Ok(_) => {
-            let mut new_client = Client::new();
-            new_client.mac = client.mac;
-            new_client.site = client.site;
+            let mut new_client = Client::new_with_info(&client);
             new_client.approver = admin.unwrap().name;
-            new_client.time_connection = client.minutes.to_string();
-            new_client.status = if client.approved {
-                ClientStatus::Approved
-            } else {
-                ClientStatus::Reject
-            };
 
             let _ = repository.save(new_client).await;
         }
@@ -119,7 +111,7 @@ pub async fn client_connection_approver(
     cookies: &CookieJar<'_>,
     repository: ClientRepository,
     approver_repository: ApproverRepository,
-    data: Json<ClientForm>,
+    data: Json<ClientData>,
 ) -> Result<CustomStatus, CustomError> {
     let client = data.into_inner();
 
@@ -134,17 +126,13 @@ pub async fn client_connection_approver(
         .parse()
         .expect("DEFAULT_APPROVAL_TIME NOT NUMBER");
 
-    let mut new_client = Client::new();
-    new_client.full_name = client.full_name;
-    new_client.email = client.email;
-    new_client.phone = client.phone;
-    new_client.cpf = client.cpf;
+    let mut new_client = Client::new_with_data(&client);
     new_client.site = site.clone();
     new_client.mac = mac.clone();
     new_client.time_connection = minutes.to_string();
 
     // Approval by code
-    if let Some(code) = client.au_code {
+    if let Some(code) = client.approver_code {
         let approver = validate_code(code, &approver_repository).await;
         if approver.is_none() {
             return Err(Error::new_bad_request("Invalid Fields"));
