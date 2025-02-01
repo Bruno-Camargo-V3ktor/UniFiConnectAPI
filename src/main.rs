@@ -6,9 +6,9 @@ mod unifi;
 mod utils;
 
 use controllers::admin_controller::{self, admin_page};
-use controllers::approver_controller;
 use controllers::error_controller::handles;
 use controllers::guest_controller::{self, guest_page, guest_register};
+use controllers::{approver_controller, config_controller};
 use db::mongo_db::MongoDb;
 use dotenv::dotenv;
 use rocket::fs::FileServer;
@@ -80,6 +80,7 @@ pub fn api_routes() -> Vec<Route> {
     let mut routes = guest_controller::routes();
     routes.append(&mut admin_controller::routes());
     routes.append(&mut approver_controller::routes());
+    routes.append(&mut config_controller::routes());
 
     routes
 }
