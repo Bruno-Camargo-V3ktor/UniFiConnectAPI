@@ -1,5 +1,3 @@
-use std::env;
-
 use crate::{
     model::{
         entity::{
@@ -17,6 +15,7 @@ use crate::{
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
 use rocket::{Route, delete, get, post, put, routes, serde::json::Json};
+use std::env;
 
 #[post("/approver", data = "<data>")]
 pub async fn create_approver(
@@ -47,6 +46,7 @@ pub async fn create_approver(
         email: approver.email,
         password: approver.password,
         validity: None,
+        approved_types: vec!["Guest".to_string()],
         secrete_code: approver.secrete_code,
     };
     approver.create_validity();
@@ -111,18 +111,27 @@ pub async fn update_approver(
     }
 
     approver.password = {
+        let mut new_password = approver.password.clone();
         if let Some(p) = approver_data.password {
-            hash(p.as_str(), DEFAULT_COST).unwrap();
+            new_password = hash(p.as_str(), DEFAULT_COST).unwrap();
         }
-        approver.password.clone()
+        new_password
     };
 
     approver.secrete_code = {
+        let mut new_code = approver.secrete_code.clone();
         if let Some(s) = approver_data.secrete_code {
-            hash(s.as_str(), DEFAULT_COST).unwrap();
+            new_code = hash(s.as_str(), DEFAULT_COST).unwrap();
             approver.create_validity();
         }
-        approver.secrete_code.clone()
+        new_code
+    };
+
+    approver.approved_types = {
+        if let Some(s) = approver_data.approved_types {
+            approver.approved_types = s;
+        }
+        approver.approved_types
     };
 
     let _ = repository.update(approver).await;

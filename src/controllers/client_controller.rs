@@ -14,7 +14,7 @@ use crate::model::repository::approver_repository::ApproverRepository;
 use crate::model::repository::client_repository::ClientRepository;
 use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiController;
-use crate::utils::error::{CustomError, Error, Unauthorized};
+use crate::utils::error::{BadRequest, CustomError, Error, Unauthorized};
 use crate::utils::responses::{CustomStatus, Ok, Response};
 
 // ENDPOINTS
@@ -112,7 +112,7 @@ pub async fn client_connection_approver(
     repository: ClientRepository,
     approver_repository: ApproverRepository,
     data: Json<ClientData>,
-) -> Result<CustomStatus, CustomError> {
+) -> Result<CustomStatus, BadRequest> {
     let client = data.into_inner();
 
     if !client.validate_form() {

@@ -13,6 +13,7 @@ pub struct Approver {
     pub email: String,
     pub password: String,
     pub secrete_code: String,
+    pub approved_types: Vec<String>,
     pub validity: Option<DateTime<Local>>,
 }
 
@@ -42,6 +43,7 @@ pub struct ApproverUpdate {
     pub username: Option<String>,
     pub email: Option<String>,
     pub password: Option<String>,
+    pub approved_types: Option<Vec<String>>,
     pub secrete_code: Option<String>,
 }
 
@@ -53,7 +55,9 @@ impl Approver {
             .parse::<i64>()
             .expect("VALIDITY_DAYS_APPROVAL_CODE NOT NUMBER");
 
-        if days <= 0 { return; }
+        if days <= 0 {
+            return;
+        }
 
         let date = Local::now()
             .checked_add_signed(Duration::days(days))
@@ -74,10 +78,10 @@ impl ApproverCode {
             .unwrap_or("0".to_string())
             .parse::<usize>()
             .expect("VALIDITY_DAYS_APPROVAL_CODE NOT NUMBER");
-        
+
         Self {
             new_code: code,
-            days: Some(days)
+            days: Some(days),
         }
     }
 }
