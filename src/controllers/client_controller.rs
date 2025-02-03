@@ -28,7 +28,7 @@ pub async fn client_connect_page() -> Result<NamedFile, ()> {
         .expect("Client Connect Page Not Found"))
 }
 
-#[get("/s/<site>?<ap>&<id>&<t>&<url>&<ssid>", format = "text/html")]
+#[get("/guest/s/<site>?<ap>&<id>&<t>&<url>&<ssid>", format = "text/html")]
 pub async fn client_register(
     cookies: &CookieJar<'_>,
     site: String,
@@ -38,7 +38,7 @@ pub async fn client_register(
     url: String,
     ssid: String,
 ) -> Result<Redirect, ()> {
-    // /client/s/default/?ap=70:a7:41:dd:7a:78&id=4c:eb:42:9b:82:55&t=1734714029&url=http://www.msftconnecttest.com%2Fredirect&ssid=Wi-Fi_Visitantes%20
+    // /guest/s/default/?ap=70:a7:41:dd:7a:78&id=4c:eb:42:9b:82:55&t=1734714029&url=http://www.msftconnecttest.com%2Fredirect&ssid=Wi-Fi_Visitantes%20
 
     cookies.add(("ap", ap.clone()));
     cookies.add(("id", id.clone()));
@@ -133,7 +133,7 @@ pub async fn client_connection_approver(
 
     // Approval by code
     if let Some(code) = client.approver_code {
-        let approver = validate_code(code, &approver_repository).await;
+        let approver = validate_code(code, &client.client_type , &approver_repository).await;
         if approver.is_none() {
             return Err(Error::new_bad_request("Invalid Fields"));
         }

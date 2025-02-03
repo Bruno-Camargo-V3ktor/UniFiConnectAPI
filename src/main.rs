@@ -71,8 +71,9 @@ async fn start() -> _ {
             "/static",
             FileServer::from(env::var("STATIC_FILES_DIR").expect("STATIC_FILES_DIR NOT DEFINED")),
         )
+        .mount("/", routes![client_register])
         .mount("/admin", routes![admin_page])
-        .mount("/client", routes![client_register, client_connect_page])
+        .mount("/client", routes![client_connect_page])
         .mount("/api", api_routes())
 }
 

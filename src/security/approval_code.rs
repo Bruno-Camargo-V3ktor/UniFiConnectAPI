@@ -3,11 +3,13 @@ use bcrypt::verify;
 use chrono::Local;
 
 // Functions
-pub async fn validate_code(code: String, repository: &ApproverRepository) -> Option<String> {
+pub async fn validate_code(code: String, destination: &String, repository: &ApproverRepository) -> Option<String> {
     let approvers = repository.find_all().await;
     let now = Local::now();
 
     for ap in approvers {
+        if !ap.approved_types.contains(destination) { continue; }
+
         let validity_date = ap.validity.clone();
         if let Some(date) = validity_date {
             if now > date {
