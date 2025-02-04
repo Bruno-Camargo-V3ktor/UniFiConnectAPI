@@ -125,8 +125,8 @@ impl DeviceUnauthorize {
 }
 
 impl UnifiController {
-    pub fn new(base_url: String, username: String, password: String) -> Self {
-        Self {
+    pub async fn new(base_url: String, username: String, password: String) -> Self {
+        let mut unifi = Self {
             base_url,
             username,
             password,
@@ -136,7 +136,10 @@ impl UnifiController {
                 .cookie_store(true) // Habilitando o armazenamento e envio automatico de cookies
                 .build()
                 .unwrap(),
-        }
+        };
+
+        let _ = unifi.authentication_api().await;
+        unifi
     }
 
     fn check_authentication(&mut self) -> bool {

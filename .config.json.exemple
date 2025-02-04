@@ -5,7 +5,9 @@
         "workers": 8,                 
         "log_level": "normal",             
         "keep_alive": 5,         
-        "secret_key": "---" 
+        "secret_key": "---" ,
+
+        "files_dir": "C:/static/"
     },
     
     "database": {

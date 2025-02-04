@@ -3,6 +3,10 @@ use std::fs::File;
 use std::io::prelude::*;
 use rocket::{config::SecretKey, figment::Figment};
 use serde::{Serialize, Deserialize};
+use tokio::sync::RwLock;
+
+// Types
+pub type ConfigApp = RwLock<ConfigApplication>;
 
 // Structs
 #[derive(Serialize, Deserialize, Clone)]
@@ -12,7 +16,8 @@ pub struct ServerConfig {
     pub workers: usize,                 
     pub log_level: String,             
     pub keep_alive: u32,         
-    pub secret_key: String 
+    pub secret_key: String,
+    pub files_dir: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -93,9 +98,7 @@ impl ConfigApplication {
             ..rocket::Config::default()
         };
 
-        let database_url = self.database.url.clone()
-                                  .replacen("{}", &self.database.username.clone(), 1)
-                                  .replacen("{}", &self.database.password.clone(), 1);
+        let database_url = self.database.get_formated_url();
 
         let figment = Figment::from(config).merge(("databases.mongodb", rocket_db_pools::Config {
             url: database_url,
@@ -110,4 +113,12 @@ impl ConfigApplication {
         figment
     }
 
+}
+
+impl DatabaseConfig {
+    pub fn get_formated_url(&self) -> String {
+        self.url.clone()
+            .replacen("{}", &self.username.clone(), 1)
+            .replacen("{}", &self.password.clone(), 1)
+    }
 }
