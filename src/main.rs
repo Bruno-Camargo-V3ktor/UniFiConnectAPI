@@ -6,6 +6,7 @@ mod security;
 mod unifi;
 mod utils;
 
+use configurations::config::ConfigApplication;
 use controllers::admin_controller::{self, admin_page};
 use controllers::client_controller::{self, client_connect_page, client_register};
 use controllers::error_controller::handles;
@@ -32,6 +33,7 @@ use utils::monitoring::ClientsMonitoring;
 async fn start() -> _ {
     // Starting environment variables
     dotenv().ok();
+
 
     // Creating an instance of the Configuration and Request Structure to the Unifi Controller
     let mut unifi = UnifiController::new(
