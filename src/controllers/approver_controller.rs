@@ -1,4 +1,5 @@
 use crate::{
+    configurations::config::ConfigApp,
     model::{
         entity::{
             admin::Admin,
@@ -14,18 +15,19 @@ use crate::{
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
-use rocket::{Route, delete, get, post, put, routes, serde::json::Json};
-use std::env;
+use rocket::{Route, State, delete, get, post, put, routes, serde::json::Json};
 
 #[post("/approver", data = "<data>")]
 pub async fn create_approver(
     data: Json<ApproverData>,
     repository: MongoRepository<Approver>,
     admin: Option<Admin>,
+    config: &State<ConfigApp>,
 ) -> Result<Created<()>, Unauthorized> {
     if admin.is_none() {
         return Err(Error::new_unauthorized("Unauthorized user"));
     }
+    let config = config.read().await;
 
     let mut approver = data.into_inner();
 
@@ -49,7 +51,7 @@ pub async fn create_approver(
         approved_types: vec!["Guest".to_string()],
         secrete_code: approver.secrete_code,
     };
-    approver.create_validity();
+    approver.create_validity(config.approvers.validity_days_code.clone() as i64);
 
     let _ = repository.save(approver).await;
 
@@ -80,11 +82,13 @@ pub async fn update_approver(
     data: Json<ApproverUpdate>,
     repository: MongoRepository<Approver>,
     admin: Option<Admin>,
+    config: &State<ConfigApp>,
 ) -> Result<Ok<()>, CustomError> {
     if admin.is_none() {
         return Err(Error::new_unauthorized("Unauthorized user"));
     }
 
+    let config = config.read().await;
     let approver_data = data.into_inner();
 
     let op = repository.find_by_id(approver_data.id).await;
@@ -122,7 +126,7 @@ pub async fn update_approver(
         let mut new_code = approver.secrete_code.clone();
         if let Some(s) = approver_data.secrete_code {
             new_code = hash(s.as_str(), DEFAULT_COST).unwrap();
-            approver.create_validity();
+            approver.create_validity(config.approvers.validity_days_code.clone() as i64);
         }
         new_code
     };
@@ -144,11 +148,11 @@ pub async fn generator_approver_code(
     admin: Option<Admin>,
     data: Json<ApproverLogin>,
     repository: MongoRepository<Approver>,
+    config: &State<ConfigApp>,
 ) -> Result<Ok<ApproverCode>, BadRequest> {
-    let code_size = env::var("APPROVAL_CODE_SIZE")
-        .unwrap_or("8".to_string())
-        .parse::<u8>()
-        .expect("APPROVAL_CODE_SIZE NOT NUMBER");
+    let config = config.read().await;
+    let code_size = config.approvers.code_size.clone();
+
     let op_approver = repository
         .find_one(doc! {
             "username" : data.username.clone()
@@ -166,10 +170,13 @@ pub async fn generator_approver_code(
 
             let new_code = generator::generator_code(code_size);
             approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
-            approver.create_validity();
+            approver.create_validity(config.approvers.validity_days_code.clone() as i64);
 
             let _ = repository.update(approver).await;
-            Ok(Response::new_ok(ApproverCode::new(new_code)))
+            Ok(Response::new_ok(ApproverCode::new(
+                new_code,
+                config.approvers.validity_days_code.clone(),
+            )))
         }
 
         None => Err(Error::new_bad_request("Invalid username or password")),

@@ -1,7 +1,7 @@
 use rand::prelude::*;
 
 // Functions
-pub fn generator_code(size: u8) -> String {
+pub fn generator_code(size: usize) -> String {
     let charset = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let mut rng = rand::rng();
     let mut code = String::new();

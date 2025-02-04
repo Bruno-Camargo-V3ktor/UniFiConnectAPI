@@ -1,12 +1,11 @@
-use std::env;
-
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
 use rocket::fairing::Result;
 use rocket::fs::NamedFile;
 use rocket::serde::json::Json;
-use rocket::{Route, delete, get, post, put, routes};
+use rocket::{Route, State, delete, get, post, put, routes};
 
+use crate::configurations::config::ConfigApp;
 use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
 use crate::model::repository::Repository;
 use crate::model::repository::mongo_repository::MongoRepository;
@@ -16,8 +15,9 @@ use crate::utils::responses::{Accepted, Created, Ok, Response};
 
 // ENDPOINTS
 #[get("/<_..>")]
-pub async fn admin_page() -> Result<NamedFile, ()> {
-    let mut path = env::var("STATIC_FILES_DIR").expect("STATIC_FILES_DIR NOT DEFINED");
+pub async fn admin_page(config: &State<ConfigApp>) -> Result<NamedFile, ()> {
+    let config = config.read().await;
+    let mut path = config.server.files_dir.clone();
     path.push_str("/admin/index.html");
 
     Ok(NamedFile::open(path).await.expect("Admin Page Not Found"))
@@ -27,7 +27,10 @@ pub async fn admin_page() -> Result<NamedFile, ()> {
 pub async fn login(
     data: Json<AdminLogin>,
     repository: MongoRepository<Admin>,
+    config: &State<ConfigApp>,
 ) -> Result<Accepted<String>, BadRequest> {
+    let config = config.read().await;
+
     let res = repository
         .find_one(doc! {
            "username" : &data.username
@@ -39,7 +42,11 @@ pub async fn login(
             let check = verify(&data.password, admin.password.unwrap().as_str());
             if let Ok(b) = check {
                 if b {
-                    return Ok(Response::new_accepted(create_token(&admin.id)));
+                    return Ok(Response::new_accepted(create_token(
+                        &admin.id,
+                        config.server.secret_key.clone(),
+                        config.admins.token_expirantion.clone() as u64,
+                    )));
                 }
             }
         }

@@ -1,5 +1,3 @@
-use std::env;
-
 use crate::db::mongo_db::serde_object_id;
 use chrono::{DateTime, Duration, Local, TimeZone};
 use rocket::serde::{Deserialize, Serialize};
@@ -62,15 +60,10 @@ impl Entity<String> for Approver {
     fn get_name() -> String {
         String::from("Approvers")
     }
-}  
+}
 
 impl Approver {
-    pub fn create_validity(&mut self) {
-        let days = env::var("VALIDITY_DAYS_APPROVAL_CODE")
-            .expect("VALIDITY_DAYS_APPROVAL_CODE NOT DEFINED")
-            .parse::<i64>()
-            .expect("VALIDITY_DAYS_APPROVAL_CODE NOT NUMBER");
-
+    pub fn create_validity(&mut self, days: i64) {
         if days <= 0 {
             return;
         }
@@ -89,12 +82,7 @@ impl Approver {
 }
 
 impl ApproverCode {
-    pub fn new(code: String) -> Self {
-        let days = env::var("VALIDITY_DAYS_APPROVAL_CODE")
-            .unwrap_or("0".to_string())
-            .parse::<usize>()
-            .expect("VALIDITY_DAYS_APPROVAL_CODE NOT NUMBER");
-
+    pub fn new(code: String, days: usize) -> Self {
         Self {
             new_code: code,
             days: Some(days),

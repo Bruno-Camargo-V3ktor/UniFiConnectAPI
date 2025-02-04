@@ -1,17 +1,16 @@
 use rocket::{
+    State,
     http::Status,
     request::{FromRequest, Outcome, Request},
     serde::{Deserialize, Serialize},
 };
 use rocket_db_pools::Connection;
-use std::{
-    env,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode, errors::Result};
 
 use crate::{
+    configurations::config::ConfigApp,
     db::mongo_db::MongoDb,
     model::{
         entity::admin::Admin,
@@ -27,16 +26,11 @@ pub struct Claims {
 }
 
 // Functions
-pub fn create_token(user_id: &String) -> String {
-    let key = env::var("ROCKET_SECRET_KEY").unwrap();
-    let hours = env::var("TOKEN_EXPERIMENT_TIME")
-        .unwrap_or("1".to_string())
-        .parse::<u64>()
-        .unwrap()
-        * 60;
+pub fn create_token(user_id: &String, key: String, hours: u64) -> String {
+    let minutes = hours * 60;
 
     let expiration =
-        SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(60 * hours);
+        SystemTime::now().duration_since(UNIX_EPOCH).unwrap() + Duration::from_secs(60 * minutes);
 
     let content = Claims {
         sub: user_id.clone(),
@@ -51,9 +45,7 @@ pub fn create_token(user_id: &String) -> String {
     .unwrap()
 }
 
-pub fn validate_token(token: String) -> Result<Claims> {
-    let key = env::var("ROCKET_SECRET_KEY").unwrap();
-
+pub fn validate_token(token: String, key: String) -> Result<Claims> {
     decode(
         token.as_str(),
         &DecodingKey::from_secret(key.as_bytes()),
@@ -69,6 +61,12 @@ impl<'r> FromRequest<'r> for Admin {
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let keys: Vec<_> = request.headers().get("Authorization").collect();
+        let config = request
+            .guard::<&State<ConfigApp>>()
+            .await
+            .unwrap()
+            .read()
+            .await;
 
         if keys.len() < 1 {
             return Outcome::Forward(Status::Continue);
@@ -76,15 +74,15 @@ impl<'r> FromRequest<'r> for Admin {
 
         let token = keys[0].replace("Bearer ", "");
 
-        match validate_token(token.to_string()) {
+        match validate_token(token.to_string(), config.server.secret_key.clone()) {
             Ok(content) => {
                 let repository = MongoRepository::<Admin>::new(
                     request
-                    .guard::<Connection<MongoDb>>()
-                    .await
-                    .unwrap()
-                    .default_database()
-                    .unwrap()
+                        .guard::<Connection<MongoDb>>()
+                        .await
+                        .unwrap()
+                        .default_database()
+                        .unwrap(),
                 );
 
                 let res = repository.find_by_id(content.sub).await;

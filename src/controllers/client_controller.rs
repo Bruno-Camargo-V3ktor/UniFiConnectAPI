@@ -1,17 +1,16 @@
-use std::env;
-
 use chrono::Local;
 use rocket::fs::NamedFile;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
-use rocket::{Route, get, post, put, routes};
+use rocket::{Route, State, get, post, put, routes};
 
+use crate::configurations::config::ConfigApp;
 use crate::model::entity::admin::Admin;
 use crate::model::entity::approver::Approver;
 use crate::model::entity::client::{Client, ClientData, ClientInfo, ClientStatus};
-use crate::model::repository::mongo_repository::MongoRepository;
 use crate::model::repository::Repository;
+use crate::model::repository::mongo_repository::MongoRepository;
 use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiController;
 use crate::utils::error::{BadRequest, CustomError, Error, Unauthorized};
@@ -19,8 +18,9 @@ use crate::utils::responses::{CustomStatus, Ok, Response};
 
 // ENDPOINTS
 #[get("/<_..>")]
-pub async fn client_connect_page() -> Result<NamedFile, ()> {
-    let mut path = env::var("STATIC_FILES_DIR").expect("STATIC_FILES_DIR NOT DEFINED");
+pub async fn client_connect_page(config: &State<ConfigApp>) -> Result<NamedFile, ()> {
+    let config = config.read().await;
+    let mut path = config.server.files_dir.clone();
     path.push_str("/client/index.html");
 
     Ok(NamedFile::open(path)
@@ -112,19 +112,30 @@ pub async fn client_connection_approver(
     repository: MongoRepository<Client>,
     approver_repository: MongoRepository<Approver>,
     data: Json<ClientData>,
+    config: &State<ConfigApp>,
 ) -> Result<CustomStatus, BadRequest> {
+    let config = config.read().await;
     let client = data.into_inner();
 
     if !client.validate_form() {
         return Err(Error::new_bad_request("Invalid Form Field(s)"));
     }
 
+    let group = config
+        .clients
+        .groups
+        .iter()
+        .find(|g| g.name == client.client_type);
+
+    if let None = group {
+        return Err(Error::new_bad_request("Invalid Form Field(s)"));
+    }
+
+    let group = group.unwrap();
+
     let mac = cookies.get("id").unwrap().value().to_string();
     let site = cookies.get("site").unwrap().value().to_string();
-    let minutes: u16 = env::var("DEFAULT_APPROVAL_TIME")
-        .unwrap_or("180".to_string())
-        .parse()
-        .expect("DEFAULT_APPROVAL_TIME NOT NUMBER");
+    let minutes: u16 = group.time_conneciton.clone() as u16;
 
     let mut new_client = Client::new_with_data(&client);
     new_client.site = site.clone();
@@ -133,7 +144,7 @@ pub async fn client_connection_approver(
 
     // Approval by code
     if let Some(code) = client.approver_code {
-        let approver = validate_code(code, &client.client_type , &approver_repository).await;
+        let approver = validate_code(code, &client.client_type, &approver_repository).await;
         if approver.is_none() {
             return Err(Error::new_bad_request("Invalid Fields"));
         }
