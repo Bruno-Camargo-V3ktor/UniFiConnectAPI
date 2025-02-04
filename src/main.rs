@@ -34,6 +34,8 @@ async fn start() -> _ {
     // Starting environment variables
     dotenv().ok();
 
+    // Starting Configurations...
+    let mut config = ConfigApplication::new();
 
     // Creating an instance of the Configuration and Request Structure to the Unifi Controller
     let mut unifi = UnifiController::new(
@@ -63,7 +65,7 @@ async fn start() -> _ {
     });
 
     // Rocket Server
-    rocket::build()
+    rocket::custom(config.to_rocket_config())
         .attach(MongoDb::init())
         //
         .manage(Arc::new(Mutex::new(unifi)))

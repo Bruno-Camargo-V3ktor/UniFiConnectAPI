@@ -1,34 +1,35 @@
 
 use std::fs::File;
 use std::io::prelude::*;
+use rocket::{config::SecretKey, figment::Figment};
 use serde::{Serialize, Deserialize};
 
 // Structs
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ServerConfig {
     pub address: String,     
-    pub port: usize,                   
+    pub port: u16,                   
     pub workers: usize,                 
     pub log_level: String,             
-    pub keep_alive: usize,         
+    pub keep_alive: u32,         
     pub secret_key: String 
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DatabaseConfig {
     pub url: String,
     pub username: String,
     pub password: String
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct UnifiConfig {
     pub url: String,
     pub username: String,
     pub password: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ClientGroup {
     pub name: String,
     pub time_conneciton: usize,
@@ -38,23 +39,23 @@ pub struct ClientGroup {
     pub download_limit: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ClientsConfig {
     pub groups: Vec<ClientGroup>
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ApproversConfig {
     pub code_size: usize,
     pub validity_days_code: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AdminsConfig {
     pub token_expirantion: usize,
 } 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ConfigApplication {
     pub server: ServerConfig,
     pub unifi: UnifiConfig,
@@ -79,6 +80,34 @@ impl ConfigApplication {
         let json_str = serde_json::to_string_pretty(&self).unwrap();
         let mut file = File::create(".config.json").expect("Configuration file not found");
         file.write(json_str.as_bytes()).expect("Error saving settings file");
+    }
+
+    pub fn to_rocket_config(&self) -> rocket::figment::Figment {
+        let config = rocket::Config {
+            address: self.server.address.parse().unwrap(),
+            port: self.server.port.clone(),
+            workers: self.server.workers,                 
+            log_level: self.server.log_level.parse().unwrap(),  
+            keep_alive: self.server.keep_alive.clone(),  
+            secret_key: SecretKey::from(self.server.secret_key.as_bytes()),
+            ..rocket::Config::default()
+        };
+
+        let database_url = self.database.url.clone()
+                                  .replacen("{}", &self.database.username.clone(), 1)
+                                  .replacen("{}", &self.database.password.clone(), 1);
+
+        let figment = Figment::from(config).merge(("databases.mongodb", rocket_db_pools::Config {
+            url: database_url,
+            min_connections: Some(64),
+            max_connections: 1024,
+            connect_timeout: 5,
+            idle_timeout: Some(120),
+            extensions: None,
+            ..rocket_db_pools::Config::default()
+        }));
+
+        figment
     }
 
 }

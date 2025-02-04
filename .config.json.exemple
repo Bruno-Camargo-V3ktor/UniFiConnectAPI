@@ -9,7 +9,7 @@
     },
     
     "database": {
-        "url": "mongodb://localhost:27017/UniFiConnect",
+        "url": "mongodb://{}:{}@localhost:27017/UniFiConnect",
         "username": "",
         "password": ""
     },
