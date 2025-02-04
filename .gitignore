@@ -1,7 +1,4 @@
-
-.env
 Cargo.lock
 /target
 /static
-Rocket.toml
 .config.json
