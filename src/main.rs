@@ -1,3 +1,4 @@
+mod configurations;
 mod controllers;
 mod db;
 mod model;
