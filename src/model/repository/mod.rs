@@ -1,7 +1,5 @@
 // Mods
-pub mod admin_repositoy;
-pub mod approver_repository;
-pub mod client_repository;
+pub mod mongo_repository;
 
 // Traits
 #[allow(unused)]

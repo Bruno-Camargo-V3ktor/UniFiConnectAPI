@@ -4,7 +4,7 @@ use crate::{
             admin::Admin,
             approver::{Approver, ApproverCode, ApproverData, ApproverLogin, ApproverUpdate},
         },
-        repository::{Repository, approver_repository::ApproverRepository},
+        repository::{Repository, mongo_repository::MongoRepository},
     },
     utils::{
         error::{BadRequest, CustomError, Error, Unauthorized},
@@ -20,7 +20,7 @@ use std::env;
 #[post("/approver", data = "<data>")]
 pub async fn create_approver(
     data: Json<ApproverData>,
-    repository: ApproverRepository,
+    repository: MongoRepository<Approver>,
     admin: Option<Admin>,
 ) -> Result<Created<()>, Unauthorized> {
     if admin.is_none() {
@@ -59,7 +59,7 @@ pub async fn create_approver(
 #[get("/approver")]
 pub async fn get_approvers(
     admin: Option<Admin>,
-    repository: ApproverRepository,
+    repository: MongoRepository<Approver>,
 ) -> Result<Ok<Vec<Approver>>, Unauthorized> {
     if admin.is_none() {
         return Err(Error::new_unauthorized("Unauthorized user"));
@@ -78,7 +78,7 @@ pub async fn get_approvers(
 #[put("/approver", data = "<data>")]
 pub async fn update_approver(
     data: Json<ApproverUpdate>,
-    repository: ApproverRepository,
+    repository: MongoRepository<Approver>,
     admin: Option<Admin>,
 ) -> Result<Ok<()>, CustomError> {
     if admin.is_none() {
@@ -143,7 +143,7 @@ pub async fn update_approver(
 pub async fn generator_approver_code(
     admin: Option<Admin>,
     data: Json<ApproverLogin>,
-    repository: ApproverRepository,
+    repository: MongoRepository<Approver>,
 ) -> Result<Ok<ApproverCode>, BadRequest> {
     let code_size = env::var("APPROVAL_CODE_SIZE")
         .unwrap_or("8".to_string())
@@ -179,7 +179,7 @@ pub async fn generator_approver_code(
 #[delete("/approver/<id>")]
 pub async fn delete_approver(
     id: String,
-    repository: ApproverRepository,
+    repository: MongoRepository<Approver>,
     admin: Option<Admin>,
 ) -> Result<Ok<()>, Unauthorized> {
     if admin.is_none() {

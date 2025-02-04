@@ -15,7 +15,7 @@ use crate::{
     db::mongo_db::MongoDb,
     model::{
         entity::admin::Admin,
-        repository::{Repository, admin_repositoy::AdminRepository},
+        repository::{Repository, mongo_repository::MongoRepository},
     },
 };
 
@@ -78,15 +78,14 @@ impl<'r> FromRequest<'r> for Admin {
 
         match validate_token(token.to_string()) {
             Ok(content) => {
-                let repository = AdminRepository {
-                    database: request
-                        .guard::<Connection<MongoDb>>()
-                        .await
-                        .unwrap()
-                        .default_database()
-                        .unwrap(),
-                    name: "Admins".to_string(),
-                };
+                let repository = MongoRepository::<Admin>::new(
+                    request
+                    .guard::<Connection<MongoDb>>()
+                    .await
+                    .unwrap()
+                    .default_database()
+                    .unwrap()
+                );
 
                 let res = repository.find_by_id(content.sub).await;
 

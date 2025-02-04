@@ -1,7 +1,7 @@
 use crate::{
     model::{
         entity::client::{Client, ClientStatus},
-        repository::{Repository, client_repository::ClientRepository},
+        repository::{mongo_repository::MongoRepository, Repository},
     },
     unifi::unifi::{DeviceInfo, UnifiController},
 };
@@ -10,7 +10,7 @@ use rocket_db_pools::mongodb::Database;
 // Struct
 pub struct ClientsMonitoring {
     sites: Vec<String>,
-    repo: ClientRepository,
+    repo: MongoRepository<Client>,
     unifi: UnifiController,
 }
 
@@ -20,10 +20,7 @@ impl ClientsMonitoring {
     pub fn new(sites: Vec<String>, database: Database, unifi: UnifiController) -> Self {
         Self {
             sites,
-            repo: ClientRepository {
-                database,
-                name: String::from("Clients"),
-            },
+            repo: MongoRepository::new(database),
             unifi,
         }
     }

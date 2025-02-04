@@ -1,26 +1,38 @@
+use std::marker::PhantomData;
+
 use super::Repository;
-use crate::{db::mongo_db::MongoDb, model::entity::client::Client};
+use crate::{db::mongo_db::MongoDb, model::entity::Entity};
 use bson::{Document, doc, oid::ObjectId, to_document};
 use rocket::{
     futures::TryStreamExt,
     request::{FromRequest, Outcome, Request},
+    serde::{Serialize, DeserializeOwned}
 };
 use rocket_db_pools::{Connection, mongodb::Database};
 
 // Structs
-pub struct ClientRepository {
+pub struct MongoRepository<E> {
     pub database: Database,
-    pub name: String,
+    pub _phantom: PhantomData<E>
 }
 
 // Impls
-impl Repository for ClientRepository {
+impl<E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> MongoRepository<E> {
+    pub fn new(database: Database) -> Self {
+        Self {
+            database,
+            _phantom: PhantomData
+        }
+    }
+}
+
+impl<E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> Repository for MongoRepository<E> {
     type Id = String;
-    type Entity = Client;
+    type Entity = E;
     type Options = Document;
 
     async fn find(&self, query: Self::Options) -> Vec<Self::Entity> {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
         let res = collection.find(query, None).await;
 
         match res {
@@ -38,7 +50,7 @@ impl Repository for ClientRepository {
     }
 
     async fn find_one(&self, query: Self::Options) -> Option<Self::Entity> {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
         let res = collection.find_one(query, None).await;
 
         match res {
@@ -48,7 +60,7 @@ impl Repository for ClientRepository {
     }
 
     async fn find_by_id(&self, id: Self::Id) -> Option<Self::Entity> {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
 
         let doc = doc! {
             "_id": ObjectId::parse_str(&id).unwrap(),
@@ -59,7 +71,7 @@ impl Repository for ClientRepository {
     }
 
     async fn find_all(&self) -> Vec<Self::Entity> {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
 
         let res = collection.find(doc! {}, None).await;
 
@@ -78,10 +90,10 @@ impl Repository for ClientRepository {
     }
 
     async fn save(&self, mut entity: Self::Entity) -> Option<Self::Entity> {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
 
         let new_id = ObjectId::new().to_string();
-        entity.id = new_id;
+        entity.set_id(new_id);
 
         let res = collection.insert_one(&entity, None).await;
 
@@ -89,11 +101,11 @@ impl Repository for ClientRepository {
     }
 
     async fn save_all(&self, mut entitys: Vec<Self::Entity>) -> Vec<Self::Entity> {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
 
         for e in entitys.iter_mut() {
             let new_id = ObjectId::new().to_string();
-            e.id = new_id;
+            e.set_id(new_id);
         }
 
         let _ = collection.insert_many(&entitys, None).await;
@@ -101,11 +113,11 @@ impl Repository for ClientRepository {
     }
 
     async fn update(&self, entity: Self::Entity) -> Option<Self::Entity> {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
 
         let res = collection
             .update_one(
-                doc! { "_id" : ObjectId::parse_str( &entity.id ).unwrap() },
+                doc! { "_id" : ObjectId::parse_str( &entity.get_id() ).unwrap() },
                 doc! { "$set": to_document(&entity).unwrap() },
                 None,
             )
@@ -121,7 +133,7 @@ impl Repository for ClientRepository {
     }
 
     async fn update_all(&self, query: Self::Options, modify: Self::Options) -> usize {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
 
         let res = collection.update_many(query, modify, None).await;
         match res {
@@ -131,10 +143,10 @@ impl Repository for ClientRepository {
     }
 
     async fn delete(&self, entity: Self::Entity) -> bool {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
         let res = collection
             .delete_one(
-                doc! { "_id" : ObjectId::parse_str(&entity.id).unwrap() },
+                doc! { "_id" : ObjectId::parse_str(&entity.get_id()).unwrap() },
                 None,
             )
             .await;
@@ -146,7 +158,7 @@ impl Repository for ClientRepository {
     }
 
     async fn delete_by_id(&self, id: Self::Id) -> bool {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
         let res = collection
             .delete_one(doc! { "_id" : ObjectId::parse_str(&id).unwrap() }, None)
             .await;
@@ -158,7 +170,7 @@ impl Repository for ClientRepository {
     }
 
     async fn delete_all(&self, query: Self::Options) -> usize {
-        let collection = self.database.collection::<Self::Entity>(&self.name);
+        let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
         let res = collection.delete_one(query, None).await;
 
         match res {
@@ -170,15 +182,15 @@ impl Repository for ClientRepository {
 
 // Guards
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for ClientRepository {
+impl<'r, E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> FromRequest<'r> for MongoRepository<E> {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let db = request.guard::<Connection<MongoDb>>().await.unwrap();
 
-        let repository = ClientRepository {
+        let repository =  MongoRepository {
             database: db.default_database().unwrap(),
-            name: "Clients".to_string(),
+            _phantom: PhantomData
         };
         Outcome::Success(repository)
     }

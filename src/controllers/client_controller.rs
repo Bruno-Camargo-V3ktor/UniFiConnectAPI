@@ -8,10 +8,10 @@ use rocket::serde::json::Json;
 use rocket::{Route, get, post, put, routes};
 
 use crate::model::entity::admin::Admin;
+use crate::model::entity::approver::Approver;
 use crate::model::entity::client::{Client, ClientData, ClientInfo, ClientStatus};
+use crate::model::repository::mongo_repository::MongoRepository;
 use crate::model::repository::Repository;
-use crate::model::repository::approver_repository::ApproverRepository;
-use crate::model::repository::client_repository::ClientRepository;
 use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiController;
 use crate::utils::error::{BadRequest, CustomError, Error, Unauthorized};
@@ -53,7 +53,7 @@ pub async fn client_register(
 #[post("/client/connect", format = "application/json", data = "<data>")]
 pub async fn client_connection_api(
     mut unifi: UnifiController,
-    repository: ClientRepository,
+    repository: MongoRepository<Client>,
     data: Json<ClientInfo>,
     admin: Option<Admin>,
 ) -> Result<CustomStatus, CustomError> {
@@ -109,8 +109,8 @@ pub async fn client_connection_api(
 pub async fn client_connection_approver(
     mut unifi: UnifiController,
     cookies: &CookieJar<'_>,
-    repository: ClientRepository,
-    approver_repository: ApproverRepository,
+    repository: MongoRepository<Client>,
+    approver_repository: MongoRepository<Approver>,
     data: Json<ClientData>,
 ) -> Result<CustomStatus, BadRequest> {
     let client = data.into_inner();
@@ -159,7 +159,7 @@ pub async fn client_connection_approver(
 #[get("/client", format = "application/json")]
 pub async fn get_clients(
     admin: Option<Admin>,
-    client_repo: ClientRepository,
+    client_repo: MongoRepository<Client>,
 ) -> Result<Ok<Vec<Client>>, Unauthorized> {
     if admin.is_none() {
         return Err(Error::new_unauthorized("Unauthorized user"));
@@ -173,7 +173,7 @@ pub async fn get_clients(
 #[put("/client", format = "application/json", data = "<data>")]
 pub async fn update_client(
     admin: Option<Admin>,
-    client_repo: ClientRepository,
+    client_repo: MongoRepository<Client>,
     data: Json<Client>,
 ) -> Result<Ok<()>, Unauthorized> {
     if admin.is_none() {

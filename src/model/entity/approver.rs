@@ -4,6 +4,8 @@ use crate::db::mongo_db::serde_object_id;
 use chrono::{DateTime, Duration, Local, TimeZone};
 use rocket::serde::{Deserialize, Serialize};
 
+use super::Entity;
+
 // Struct
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Approver {
@@ -48,6 +50,20 @@ pub struct ApproverUpdate {
 }
 
 // Impls
+impl Entity<String> for Approver {
+    fn get_id(&self) -> String {
+        self.id.clone()
+    }
+
+    fn set_id(&mut self, new_id: String) {
+        self.id = new_id;
+    }
+
+    fn get_name() -> String {
+        String::from("Approvers")
+    }
+}  
+
 impl Approver {
     pub fn create_validity(&mut self) {
         let days = env::var("VALIDITY_DAYS_APPROVAL_CODE")

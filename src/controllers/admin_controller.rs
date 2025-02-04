@@ -9,7 +9,7 @@ use rocket::{Route, delete, get, post, put, routes};
 
 use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
 use crate::model::repository::Repository;
-use crate::model::repository::admin_repositoy::AdminRepository;
+use crate::model::repository::mongo_repository::MongoRepository;
 use crate::security::auth_jwt::create_token;
 use crate::utils::error::{BadRequest, CustomError, Error, Unauthorized};
 use crate::utils::responses::{Accepted, Created, Ok, Response};
@@ -26,7 +26,7 @@ pub async fn admin_page() -> Result<NamedFile, ()> {
 #[post("/admin/login", data = "<data>")]
 pub async fn login(
     data: Json<AdminLogin>,
-    repository: AdminRepository,
+    repository: MongoRepository<Admin>,
 ) -> Result<Accepted<String>, BadRequest> {
     let res = repository
         .find_one(doc! {
@@ -53,7 +53,7 @@ pub async fn login(
 #[post("/admin", data = "<data>")]
 pub async fn create_admin(
     data: Json<AdminData>,
-    repository: AdminRepository,
+    repository: MongoRepository<Admin>,
     admin: Option<Admin>,
 ) -> Result<Created<()>, CustomError> {
     if admin.is_none() {
@@ -92,7 +92,7 @@ pub async fn create_admin(
 #[put("/admin", data = "<data>")]
 pub async fn update_admin(
     data: Json<Admin>,
-    repository: AdminRepository,
+    repository: MongoRepository<Admin>,
     admin: Option<Admin>,
 ) -> Result<Ok<()>, CustomError> {
     if admin.is_none() {
@@ -137,7 +137,7 @@ pub async fn update_admin(
 #[delete("/admin/<id>")]
 pub async fn delete_admin(
     id: String,
-    repository: AdminRepository,
+    repository: MongoRepository<Admin>,
     admin: Option<Admin>,
 ) -> Result<Ok<()>, Unauthorized> {
     if admin.is_none() {
@@ -151,7 +151,7 @@ pub async fn delete_admin(
 
 #[get("/admin")]
 pub async fn get_admins(
-    repository: AdminRepository,
+    repository: MongoRepository<Admin>,
     admin: Option<Admin>,
 ) -> Result<Ok<Vec<Admin>>, Unauthorized> {
     if admin.is_none() {

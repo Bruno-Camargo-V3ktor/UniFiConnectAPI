@@ -2,6 +2,8 @@ use crate::{db::mongo_db::serde_object_id, utils::validator::Validator};
 use chrono::{DateTime, Local};
 use rocket::serde::{Deserialize, Serialize};
 
+use super::Entity;
+
 // Enums
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub enum ClientStatus {
@@ -144,3 +146,18 @@ impl ClientData {
             && Validator::validate_cpf(&self.cpf)
     }
 }
+
+// Impls
+impl Entity<String> for Client {
+    fn get_id(&self) -> String {
+        self.id.clone()
+    }
+
+    fn set_id(&mut self, new_id: String) {
+        self.id = new_id;
+    }
+
+    fn get_name() -> String {
+        String::from("Clients")
+    }
+}  
