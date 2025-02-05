@@ -7,6 +7,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
+use crate::configurations::config::ClientGroup;
+use crate::model::entity::client::Client;
+
 // Types
 pub type UnifiState = State<Arc<Mutex<UnifiController>>>;
 
@@ -267,6 +270,10 @@ impl UnifiController {
         }
 
         Ok(list)
+    }
+
+    pub async fn conect_client(&mut self, client: Client, group: ClientGroup) {
+        let _ = self.unauthorize_device(&client.site, &client.mac).await;
     }
 }
 
