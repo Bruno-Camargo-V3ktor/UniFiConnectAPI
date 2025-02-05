@@ -5,14 +5,13 @@ use crate::{
         entity::admin::Admin,
         repository::{Repository, mongo_repository::MongoRepository},
     },
-    utils::error::Error,
 };
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode, errors::Result};
 use rocket::{
     State,
     http::Status,
     request::{FromRequest, Outcome, Request},
-    serde::{Deserialize, Serialize, json::Json},
+    serde::{Deserialize, Serialize},
 };
 use rocket_db_pools::Connection;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

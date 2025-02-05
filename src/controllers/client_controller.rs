@@ -126,7 +126,6 @@ pub async fn client_connection_approver(
     if let None = group {
         return Err(Error::new_bad_request("Invalid Form Field(s)"));
     }
-
     let group = group.unwrap();
 
     let mac = cookies.get("id").unwrap().value().to_string();

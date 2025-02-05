@@ -21,8 +21,8 @@ use rocket::tokio::{
 use rocket::{Route, launch, routes};
 use rocket_db_pools::Database;
 use rocket_db_pools::mongodb::Client;
-use tokio::sync::RwLock;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use unifi::unifi::UnifiController;
 use utils::monitoring::ClientsMonitoring;
 
@@ -33,14 +33,13 @@ async fn start() -> _ {
     // Starting Configurations...
     let config = ConfigApplication::new();
 
-
     // Creating an instance of the Configuration and Request Structure to the Unifi Controller
     let unifi = UnifiController::new(
-       config.unifi.url.clone(),
-       config.unifi.username.clone(),
-       config.unifi.password.clone(),
-    ).await;
-
+        config.unifi.url.clone(),
+        config.unifi.username.clone(),
+        config.unifi.password.clone(),
+    )
+    .await;
 
     // Starting monitoring clients
     tokio::spawn(monitoring_clients(unifi.clone(), config.clone()));
@@ -61,7 +60,6 @@ async fn start() -> _ {
         .mount("/api", api_routes())
 }
 
-
 fn api_routes() -> Vec<Route> {
     let mut routes = client_controller::routes();
     routes.append(&mut admin_controller::routes());
@@ -71,16 +69,14 @@ fn api_routes() -> Vec<Route> {
     routes
 }
 
-
 // Creating monitoring that will happen in X time to align with UniFi information
 async fn monitoring_clients(unifi: UnifiController, config: ConfigApplication) {
-    let client =
-        Client::with_uri_str( config.database.get_formated_url() )
-            .await
-            .unwrap();
+    let client = Client::with_uri_str(config.database.get_formated_url())
+        .await
+        .unwrap();
 
     let db = client.default_database().unwrap();
-    let mut monitoring = ClientsMonitoring::new(vec!["default".to_string()], db, unifi);
+    let mut monitoring = ClientsMonitoring::new(db, unifi);
 
     let mut interval = time::interval(Duration::from_secs(60));
     loop {

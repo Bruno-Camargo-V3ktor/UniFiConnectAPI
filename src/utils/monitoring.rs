@@ -1,7 +1,7 @@
 use crate::{
     model::{
         entity::client::{Client, ClientStatus},
-        repository::{mongo_repository::MongoRepository, Repository},
+        repository::{Repository, mongo_repository::MongoRepository},
     },
     unifi::unifi::{DeviceInfo, UnifiController},
 };
@@ -9,7 +9,6 @@ use rocket_db_pools::mongodb::Database;
 
 // Struct
 pub struct ClientsMonitoring {
-    sites: Vec<String>,
     repo: MongoRepository<Client>,
     unifi: UnifiController,
 }
@@ -17,19 +16,24 @@ pub struct ClientsMonitoring {
 // Impls
 #[allow(unused)]
 impl ClientsMonitoring {
-    pub fn new(sites: Vec<String>, database: Database, unifi: UnifiController) -> Self {
+    pub fn new(database: Database, unifi: UnifiController) -> Self {
         Self {
-            sites,
             repo: MongoRepository::new(database),
             unifi,
         }
     }
 
     pub async fn all(&mut self) {
+        let mut sites: Vec<String> = vec![];
         let mut clients = self.repo.find_all().await;
 
-        let iter = self.sites.clone();
-        for site in iter {
+        for c in clients.iter() {
+            if !sites.contains(&c.site) {
+                sites.push(c.site.clone());
+            }
+        }
+
+        for site in sites.iter() {
             let res = self.unifi.get_guest_devices(site.clone()).await;
             if res.is_err() {
                 break;

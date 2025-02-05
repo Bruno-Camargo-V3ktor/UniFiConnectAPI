@@ -272,8 +272,14 @@ impl UnifiController {
         Ok(list)
     }
 
-    pub async fn conect_client(&mut self, client: Client, group: ClientGroup) {
-        let _ = self.unauthorize_device(&client.site, &client.mac).await;
+    pub async fn conect_client(&mut self, client: &Client, group: &ClientGroup) {
+        let _ = self
+            .authorize_device(
+                &client.site,
+                &client.mac,
+                &client.time_connection.parse::<u16>().unwrap(),
+            )
+            .await;
     }
 }
 
