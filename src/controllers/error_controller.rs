@@ -12,6 +12,11 @@ fn api_not_found(req: &Request) -> NotFound {
     )
 }
 
+#[catch(401)]
+fn api_unauthorized(_req: &Request) -> NotFound {
+    Error::new_unauthorized("Unauthorized user")
+}
+
 #[catch(400)]
 fn api_bad_request(_req: &Request) -> BadRequest {
     Error::new_bad_request("Invalid request body")
@@ -19,5 +24,5 @@ fn api_bad_request(_req: &Request) -> BadRequest {
 
 // Functions
 pub fn handles() -> Vec<Catcher> {
-    catchers![api_bad_request, api_not_found]
+    catchers![api_bad_request, api_not_found, api_unauthorized]
 }

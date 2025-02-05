@@ -1,14 +1,3 @@
-use rocket::{
-    State,
-    http::Status,
-    request::{FromRequest, Outcome, Request},
-    serde::{Deserialize, Serialize},
-};
-use rocket_db_pools::Connection;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode, errors::Result};
-
 use crate::{
     configurations::config::ConfigApp,
     db::mongo_db::MongoDb,
@@ -16,7 +5,17 @@ use crate::{
         entity::admin::Admin,
         repository::{Repository, mongo_repository::MongoRepository},
     },
+    utils::error::Error,
 };
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode, errors::Result};
+use rocket::{
+    State,
+    http::Status,
+    request::{FromRequest, Outcome, Request},
+    serde::{Deserialize, Serialize, json::Json},
+};
+use rocket_db_pools::Connection;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // Struct
 #[derive(Debug, Serialize, Deserialize)]
@@ -69,7 +68,7 @@ impl<'r> FromRequest<'r> for Admin {
             .await;
 
         if keys.len() < 1 {
-            return Outcome::Forward(Status::Continue);
+            return Outcome::Error((Status::BadRequest, ()));
         }
 
         let token = keys[0].replace("Bearer ", "");
@@ -89,13 +88,11 @@ impl<'r> FromRequest<'r> for Admin {
 
                 if let Some(admin) = res {
                     return Outcome::Success(admin);
-                } else {
-                    return Outcome::Forward(Status::Continue);
                 }
             }
             Err(_) => {}
         }
 
-        Outcome::Forward(Status::Continue)
+        return Outcome::Error((Status::Unauthorized, ()));
     }
 }

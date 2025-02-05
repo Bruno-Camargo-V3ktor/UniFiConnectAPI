@@ -21,12 +21,9 @@ use rocket::{Route, State, delete, get, post, put, routes, serde::json::Json};
 pub async fn create_approver(
     data: Json<ApproverData>,
     repository: MongoRepository<Approver>,
-    admin: Option<Admin>,
+    _admin: Admin,
     config: &State<ConfigApp>,
 ) -> Result<Created<()>, Unauthorized> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
     let config = config.read().await;
 
     let mut approver = data.into_inner();
@@ -60,13 +57,9 @@ pub async fn create_approver(
 
 #[get("/approver")]
 pub async fn get_approvers(
-    admin: Option<Admin>,
+    _admin: Admin,
     repository: MongoRepository<Approver>,
 ) -> Result<Ok<Vec<Approver>>, Unauthorized> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
     let mut entitys = repository.find_all().await;
     for i in 0..entitys.len() {
         let e = entitys.get_mut(i).unwrap();
@@ -81,13 +74,9 @@ pub async fn get_approvers(
 pub async fn update_approver(
     data: Json<ApproverUpdate>,
     repository: MongoRepository<Approver>,
-    admin: Option<Admin>,
+    _admin: Admin,
     config: &State<ConfigApp>,
 ) -> Result<Ok<()>, CustomError> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
     let config = config.read().await;
     let approver_data = data.into_inner();
 
@@ -145,7 +134,6 @@ pub async fn update_approver(
 
 #[put("/approver/code", data = "<data>")]
 pub async fn generator_approver_code(
-    admin: Option<Admin>,
     data: Json<ApproverLogin>,
     repository: MongoRepository<Approver>,
     config: &State<ConfigApp>,
@@ -161,11 +149,9 @@ pub async fn generator_approver_code(
 
     match op_approver {
         Some(mut approver) => {
-            if let None = admin {
-                let ok = verify(data.password.clone(), approver.password.as_str()).unwrap_or(false);
-                if !ok {
-                    return Err(Error::new_bad_request("Invalid username or password"));
-                }
+            let ok = verify(data.password.clone(), approver.password.as_str()).unwrap_or(false);
+            if !ok {
+                return Err(Error::new_bad_request("Invalid username or password"));
             }
 
             let new_code = generator::generator_code(code_size);
@@ -187,12 +173,8 @@ pub async fn generator_approver_code(
 pub async fn delete_approver(
     id: String,
     repository: MongoRepository<Approver>,
-    admin: Option<Admin>,
+    _admin: Admin,
 ) -> Result<Ok<()>, Unauthorized> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
     let _ = repository.delete_by_id(id).await;
 
     Ok(Response::new_ok(()))

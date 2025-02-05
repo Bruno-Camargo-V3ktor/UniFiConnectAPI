@@ -61,12 +61,8 @@ pub async fn login(
 pub async fn create_admin(
     data: Json<AdminData>,
     repository: MongoRepository<Admin>,
-    admin: Option<Admin>,
+    _admin: Admin,
 ) -> Result<Created<()>, CustomError> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
     let data = data.into_inner();
 
     let res = repository
@@ -100,13 +96,8 @@ pub async fn create_admin(
 pub async fn update_admin(
     data: Json<Admin>,
     repository: MongoRepository<Admin>,
-    admin: Option<Admin>,
+    mut admin: Admin,
 ) -> Result<Ok<()>, CustomError> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
-    let mut admin = admin.unwrap();
     let admin_data = data.into_inner();
 
     if !admin_data.id.is_empty() {
@@ -145,12 +136,8 @@ pub async fn update_admin(
 pub async fn delete_admin(
     id: String,
     repository: MongoRepository<Admin>,
-    admin: Option<Admin>,
+    _admin: Admin,
 ) -> Result<Ok<()>, Unauthorized> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
     let _ = repository.delete_by_id(id).await;
 
     Ok(Response::new_ok(()))
@@ -159,12 +146,8 @@ pub async fn delete_admin(
 #[get("/admin")]
 pub async fn get_admins(
     repository: MongoRepository<Admin>,
-    admin: Option<Admin>,
+    _admin: Admin,
 ) -> Result<Ok<Vec<Admin>>, Unauthorized> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
     let mut entites = repository.find_all().await;
     for i in 0..entites.len() {
         let e = entites.get_mut(i).unwrap();

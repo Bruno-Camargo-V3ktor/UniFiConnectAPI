@@ -1,10 +1,3 @@
-use chrono::Local;
-use rocket::fs::NamedFile;
-use rocket::http::CookieJar;
-use rocket::response::Redirect;
-use rocket::serde::json::Json;
-use rocket::{Route, State, get, post, put, routes};
-
 use crate::configurations::config::ConfigApp;
 use crate::model::entity::admin::Admin;
 use crate::model::entity::approver::Approver;
@@ -15,6 +8,12 @@ use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiController;
 use crate::utils::error::{BadRequest, CustomError, Error, Unauthorized};
 use crate::utils::responses::{CustomStatus, Ok, Response};
+use chrono::Local;
+use rocket::fs::NamedFile;
+use rocket::http::CookieJar;
+use rocket::response::Redirect;
+use rocket::serde::json::Json;
+use rocket::{Route, State, get, post, put, routes};
 
 // ENDPOINTS
 #[get("/<_..>")]
@@ -55,18 +54,15 @@ pub async fn client_connection_api(
     mut unifi: UnifiController,
     repository: MongoRepository<Client>,
     data: Json<ClientInfo>,
-    admin: Option<Admin>,
+    admin: Admin,
 ) -> Result<CustomStatus, CustomError> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
     let client = data.into_inner();
 
     // Approving a pending order
     if let Some(id) = client.id.clone() {
         if let Some(mut c) = repository.find_by_id(id).await {
             if client.connect {
-                c.approver = admin.unwrap().name;
+                c.approver = admin.name;
                 c.status = ClientStatus::Approved;
                 c.start_time = Local::now();
 
@@ -95,7 +91,7 @@ pub async fn client_connection_api(
     match res {
         Ok(_) => {
             let mut new_client = Client::new_with_info(&client);
-            new_client.approver = admin.unwrap().name;
+            new_client.approver = admin.name;
 
             let _ = repository.save(new_client).await;
         }
@@ -169,13 +165,9 @@ pub async fn client_connection_approver(
 
 #[get("/client", format = "application/json")]
 pub async fn get_clients(
-    admin: Option<Admin>,
+    _admin: Admin,
     client_repo: MongoRepository<Client>,
 ) -> Result<Ok<Vec<Client>>, Unauthorized> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
     let clients = client_repo.find_all().await;
 
     Ok(Response::new_ok(clients))
@@ -183,14 +175,10 @@ pub async fn get_clients(
 
 #[put("/client", format = "application/json", data = "<data>")]
 pub async fn update_client(
-    admin: Option<Admin>,
+    _admin: Admin,
     client_repo: MongoRepository<Client>,
     data: Json<Client>,
 ) -> Result<Ok<()>, Unauthorized> {
-    if admin.is_none() {
-        return Err(Error::new_unauthorized("Unauthorized user"));
-    }
-
     let _ = client_repo.update(data.into_inner()).await;
     Ok(Response::new_ok(()))
 }
