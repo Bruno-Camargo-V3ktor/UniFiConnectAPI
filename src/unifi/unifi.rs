@@ -272,7 +272,7 @@ impl UnifiController {
         Ok(list)
     }
 
-    pub async fn conect_client(&mut self, client: &Client, group: &ClientGroup) {
+    pub async fn conect_client(&mut self, client: &Client, _group: &ClientGroup) {
         let _ = self
             .authorize_device(
                 &client.site,
