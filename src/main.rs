@@ -10,7 +10,7 @@ use configurations::config::ConfigApplication;
 use controllers::admin_controller::{self, admin_page};
 use controllers::client_controller::{self, client_connect_page, client_register};
 use controllers::error_controller::handles;
-use controllers::{approver_controller, config_controller};
+use controllers::{approver_controller, config_controller, user_controller};
 use db::mongo_db::MongoDb;
 use rocket::fs::FileServer;
 use rocket::tokio::{
@@ -64,6 +64,7 @@ fn api_routes() -> Vec<Route> {
     let mut routes = client_controller::routes();
     routes.append(&mut admin_controller::routes());
     routes.append(&mut approver_controller::routes());
+    routes.append(&mut user_controller::routes());
     routes.append(&mut config_controller::routes());
 
     routes

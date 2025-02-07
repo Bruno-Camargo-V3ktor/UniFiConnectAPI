@@ -3,3 +3,4 @@ pub mod approver_controller;
 pub mod client_controller;
 pub mod config_controller;
 pub mod error_controller;
+pub mod user_controller;
