@@ -6,20 +6,19 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     #[serde(rename = "_id", with = "serde_object_id")]
-    id: String,
-    username: String,
-    password: String,
-    email: String,
-    group: String,
-    data: ClientData,
+    pub id: String,
+    pub username: String,
+    pub password: String,
+    pub email: String,
+    pub data: ClientData,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UserLogin {
-    username: String,
-    password: String,
-    group: Option<String>,
-    approver_code: Option<String>,
+    pub username: String,
+    pub password: String,
+    pub group: Option<String>,
+    pub approver_code: Option<String>,
 }
 
 // Impls

@@ -2,14 +2,14 @@
     "server": {
         "address": "0.0.0.0",
         "port": 8000,
-        "workers": 8,                 
-        "log_level": "normal",             
-        "keep_alive": 5,         
+        "workers": 8,
+        "log_level": "normal",
+        "keep_alive": 5,
         "secret_key": "---" ,
 
         "files_dir": "C:/static/"
     },
-    
+
     "database": {
         "url": "mongodb://{}:{}@localhost:27017/UniFiConnect",
         "username": "",
@@ -24,7 +24,7 @@
 
     "clients": {
         "groups": [
-            {   "name": "Guest", 
+            {   "name": "Guest",
                 "time_conneciton": 180,
                 "permissions": [],
                 "restrictions": [],
@@ -37,10 +37,16 @@
     "approvers": {
         "code_size": 8,
         "validity_days_code": 1
+        "default_group": "Guest"
     },
 
     "admins": {
         "token_expirantion": 1
+    },
+
+    "users": {
+        "default_group": "Guest",
+        "registrations_open": true
     }
 
 }

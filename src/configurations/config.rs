@@ -52,11 +52,18 @@ pub struct ClientsConfig {
 pub struct ApproversConfig {
     pub code_size: usize,
     pub validity_days_code: usize,
+    pub default_group: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct AdminsConfig {
     pub token_expirantion: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct UsersConfig {
+    pub default_group: String,
+    pub registrations_open: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -67,6 +74,7 @@ pub struct ConfigApplication {
     pub clients: ClientsConfig,
     pub approvers: ApproversConfig,
     pub admins: AdminsConfig,
+    pub users: UsersConfig,
 }
 
 // Impls
