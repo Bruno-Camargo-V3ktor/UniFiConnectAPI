@@ -22,7 +22,12 @@ pub mod serde_object_id {
     where
         D: Deserializer<'de>,
     {
-        let object_id: ObjectId = Deserialize::deserialize(deserializer)?;
-        Ok(object_id.to_string())
+        let object_id: Result<ObjectId, <D as Deserializer<'_>>::Error> =
+            Deserialize::deserialize(deserializer);
+
+        match object_id {
+            Ok(id) => Ok(id.to_string()),
+            Err(_) => Ok(String::new()),
+        }
     }
 }
