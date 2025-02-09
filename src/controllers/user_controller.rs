@@ -18,7 +18,7 @@ use crate::{
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
-use rocket::{Route, State, get, http::CookieJar, post, put, routes, serde::json::Json};
+use rocket::{Route, State, delete, get, http::CookieJar, post, put, routes, serde::json::Json};
 
 // Endpoints
 #[post("/user", data = "<data>")]
@@ -160,7 +160,22 @@ pub async fn update_user(
     Err(Error::new_not_found("User not found"))
 }
 
+#[delete("/user/<id>")]
+pub async fn delete_user(
+    _admin: Admin,
+    id: String,
+    repo: MongoRepository<User>,
+) -> Result<Ok<()>, NotFound> {
+    let res = repo.delete_by_id(id).await;
+
+    if res {
+        Ok(Response::new_ok(()))
+    } else {
+        Err(Error::new_not_found("User not Found"))
+    }
+}
+
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![create_user, login_user, get_users, update_user]
+    routes![create_user, login_user, get_users, update_user, delete_user]
 }
