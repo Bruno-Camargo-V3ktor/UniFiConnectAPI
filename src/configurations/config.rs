@@ -77,6 +77,17 @@ pub struct ConfigApplication {
     pub users: UsersConfig,
 }
 
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ConfigUpdate {
+    pub server: Option<ServerConfig>,
+    pub unifi: Option<UnifiConfig>,
+    pub database: Option<DatabaseConfig>,
+    pub clients: Option<ClientsConfig>,
+    pub approvers: Option<ApproversConfig>,
+    pub admins: Option<AdminsConfig>,
+    pub users: Option<UsersConfig>,
+}
+
 // Impls
 impl ConfigApplication {
     pub fn new() -> Self {
