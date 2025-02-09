@@ -70,9 +70,10 @@ pub async fn get_approvers(
     Ok(Response::new_ok(entitys))
 }
 
-#[put("/approver", data = "<data>")]
+#[put("/approver/<id>", data = "<data>")]
 pub async fn update_approver(
     data: Json<ApproverUpdate>,
+    id: String,
     repository: MongoRepository<Approver>,
     _admin: Admin,
     config: &State<ConfigApp>,
@@ -80,7 +81,7 @@ pub async fn update_approver(
     let config = config.read().await;
     let approver_data = data.into_inner();
 
-    let op = repository.find_by_id(approver_data.id).await;
+    let op = repository.find_by_id(id).await;
     let mut approver;
 
     if let Some(a) = op {
@@ -89,43 +90,23 @@ pub async fn update_approver(
         return Err(Error::new_bad_request("Approver Not Found"));
     }
 
-    approver.email = approver_data.email.unwrap_or(approver.email.clone());
+    approver.email = approver_data.email.unwrap_or(approver.email);
+    approver.password = approver_data
+        .password
+        .map(|p| hash(p, DEFAULT_COST).unwrap())
+        .unwrap_or(approver.password);
 
-    if let Some(u) = approver_data.username {
-        if approver.username != u {
-            let res = repository.find_one(doc! { "username": u.clone() }).await;
-            match res {
-                Some(_) => return Err(Error::new_bad_request("Username already registered")),
-                None => {
-                    approver.username = u;
-                }
-            }
-        }
-    }
-
-    approver.password = {
-        let mut new_password = approver.password.clone();
-        if let Some(p) = approver_data.password {
-            new_password = hash(p.as_str(), DEFAULT_COST).unwrap();
-        }
-        new_password
-    };
-
-    approver.secrete_code = {
-        let mut new_code = approver.secrete_code.clone();
-        if let Some(s) = approver_data.secrete_code {
-            new_code = hash(s.as_str(), DEFAULT_COST).unwrap();
+    approver.secrete_code = approver_data
+        .secrete_code
+        .map(|c| {
+            let new_code = hash(c, DEFAULT_COST).unwrap();
             approver.create_validity(config.approvers.validity_days_code.clone() as i64);
-        }
-        new_code
-    };
-
-    approver.approved_types = {
-        if let Some(s) = approver_data.approved_types {
-            approver.approved_types = s;
-        }
-        approver.approved_types
-    };
+            new_code
+        })
+        .unwrap_or(approver.secrete_code);
+    approver.approved_types = approver_data
+        .approved_types
+        .unwrap_or(approver.approved_types);
 
     let _ = repository.update(approver).await;
 

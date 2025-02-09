@@ -39,8 +39,6 @@ pub struct ApproverCode {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ApproverUpdate {
-    pub id: String,
-    pub username: Option<String>,
     pub email: Option<String>,
     pub password: Option<String>,
     pub approved_types: Option<Vec<String>>,
