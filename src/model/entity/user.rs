@@ -21,6 +21,13 @@ pub struct UserLogin {
     pub approver_code: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserUpdate {
+    pub password: Option<String>,
+    pub email: Option<String>,
+    pub data: Option<ClientData>,
+}
+
 // Impls
 impl Entity<String> for User {
     fn get_name() -> String {

@@ -5,20 +5,20 @@ use crate::{
             admin::Admin,
             approver::Approver,
             client::Client,
-            user::{User, UserLogin},
+            user::{User, UserLogin, UserUpdate},
         },
         repository::{Repository, mongo_repository::MongoRepository},
     },
     security::approval_code::validate_code,
     unifi::unifi::UnifiController,
     utils::{
-        error::{BadRequest, Error, Unauthorized},
+        error::{BadRequest, Error, NotFound, Unauthorized},
         responses::{Accepted, Created, Ok, Response},
     },
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
-use rocket::{Route, State, get, http::CookieJar, post, routes, serde::json::Json};
+use rocket::{Route, State, get, http::CookieJar, post, put, routes, serde::json::Json};
 
 // Endpoints
 #[post("/user", data = "<data>")]
@@ -129,7 +129,38 @@ pub async fn get_users(
     Ok(Response::new_ok(users))
 }
 
+#[put("/user/<id>", data = "<data>")]
+pub async fn update_user(
+    _admin: Admin,
+    id: String,
+    repo: MongoRepository<User>,
+    data: Json<UserUpdate>,
+) -> Result<Ok<()>, NotFound> {
+    let data = data.into_inner();
+    let user = repo.find_by_id(id).await;
+
+    if let Some(mut u) = user {
+        if u.password.is_empty() {
+            u.data = data.data.unwrap_or(u.data.clone());
+            repo.update(u).await;
+            return Ok(Response::new_ok(()));
+        }
+
+        u.password = data
+            .password
+            .map(|c| hash(c, DEFAULT_COST).unwrap())
+            .unwrap_or(u.password);
+        u.email = data.email.unwrap_or(u.email);
+        u.data = data.data.unwrap_or(u.data);
+
+        repo.update(u).await;
+        return Ok(Response::new_ok(()));
+    }
+
+    Err(Error::new_not_found("User not found"))
+}
+
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![create_user, login_user, get_users]
+    routes![create_user, login_user, get_users, update_user]
 }
