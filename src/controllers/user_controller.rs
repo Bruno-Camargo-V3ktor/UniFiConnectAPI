@@ -12,13 +12,13 @@ use crate::{
     security::approval_code::validate_code,
     unifi::unifi::UnifiController,
     utils::{
-        error::{BadRequest, Error},
-        responses::{Accepted, Created, Response},
+        error::{BadRequest, Error, Unauthorized},
+        responses::{Accepted, Created, Ok, Response},
     },
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
-use rocket::{Route, State, http::CookieJar, post, routes, serde::json::Json};
+use rocket::{Route, State, get, http::CookieJar, post, routes, serde::json::Json};
 
 // Endpoints
 #[post("/user", data = "<data>")]
@@ -118,7 +118,18 @@ pub async fn login_user(
     }
 }
 
+#[get("/user")]
+pub async fn get_users(
+    _admin: Admin,
+    repo: MongoRepository<User>,
+) -> Result<Ok<Vec<User>>, Unauthorized> {
+    let mut users = repo.find_all().await;
+    users.iter_mut().for_each(|u| u.password = String::new());
+
+    Ok(Response::new_ok(users))
+}
+
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![create_user, login_user]
+    routes![create_user, login_user, get_users]
 }
