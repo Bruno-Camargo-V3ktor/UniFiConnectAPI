@@ -1,3 +1,5 @@
+use std::process;
+
 use crate::{
     configurations::config::{ConfigApp, ConfigApplication, ConfigUpdate},
     model::entity::admin::Admin,
@@ -5,6 +7,10 @@ use crate::{
         error::Unauthorized,
         responses::{Ok, Response},
     },
+};
+use rocket::tokio::{
+    self,
+    time::{Duration, sleep},
 };
 use rocket::{Route, State, get, put, routes, serde::json::Json};
 
@@ -36,7 +42,10 @@ pub async fn update_configs(
     config.server = data.server.clone().unwrap_or(config.server.clone());
 
     if data.server.is_some() || data.unifi.is_some() || data.database.is_some() {
-        // Restarting Server...
+        tokio::spawn(async {
+            sleep(Duration::from_secs(5)).await;
+            process::exit(0);
+        });
     }
 
     config.save();
