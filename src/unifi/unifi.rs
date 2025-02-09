@@ -280,6 +280,18 @@ impl UnifiController {
                 &client.time_connection.parse::<u16>().unwrap(),
             )
             .await;
+
+        let devices = self
+            .get_guest_devices(client.site.clone())
+            .await
+            .unwrap_or(vec![]);
+        let device = devices.iter().find(|c| c.mac == client.mac.clone());
+        if let Some(d) = device {
+            let name = format!("{} ({})", client.full_name.clone(), client.approver.clone());
+            let _ = self
+                .rename_device(d.record_id.clone().unwrap(), client.site.clone(), name)
+                .await;
+        }
     }
 }
 

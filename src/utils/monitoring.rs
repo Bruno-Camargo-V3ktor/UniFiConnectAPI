@@ -41,37 +41,9 @@ impl ClientsMonitoring {
             let devices = res.unwrap();
 
             self.check_and_update_client_fields(&mut clients, &devices);
-            self.check_and_update_clients_names(&clients, &devices)
-                .await;
 
             for i in 0..clients.len() {
                 let r = self.repo.update(clients.remove(0)).await;
-            }
-        }
-    }
-
-    pub async fn check_and_update_clients_names(
-        &mut self,
-        clients: &Vec<Client>,
-        devices: &Vec<DeviceInfo>,
-    ) {
-        for c in clients {
-            let d = devices
-                .iter()
-                .find(|d| if c.mac == d.mac { true } else { false });
-
-            if let Some(device) = d {
-                if device.name.is_none() {
-                    self.unifi
-                        .rename_device(
-                            device.record_id.clone().unwrap(),
-                            c.site.clone(),
-                            format!("{} (Visitante)", c.full_name),
-                        )
-                        .await;
-                }
-            } else {
-                continue;
             }
         }
     }
