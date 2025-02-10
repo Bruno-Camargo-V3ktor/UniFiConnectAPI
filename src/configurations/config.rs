@@ -67,6 +67,16 @@ pub struct UsersConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct LdapConfig {
+    pub server: String,
+    pub base_dn: String,
+    pub user_service: String,
+    pub password: String,
+    pub approvers_search: Vec<String>,
+    pub users_search: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ConfigApplication {
     pub server: ServerConfig,
     pub unifi: UnifiConfig,
@@ -75,6 +85,7 @@ pub struct ConfigApplication {
     pub approvers: ApproversConfig,
     pub admins: AdminsConfig,
     pub users: UsersConfig,
+    pub ldap: LdapConfig
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -86,6 +97,7 @@ pub struct ConfigUpdate {
     pub approvers: Option<ApproversConfig>,
     pub admins: Option<AdminsConfig>,
     pub users: Option<UsersConfig>,
+    pub ldap: Option<LdapConfig>
 }
 
 // Impls

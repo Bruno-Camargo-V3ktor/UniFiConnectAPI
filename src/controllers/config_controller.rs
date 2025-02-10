@@ -40,6 +40,7 @@ pub async fn update_configs(
     config.unifi = data.unifi.clone().unwrap_or(config.unifi.clone());
     config.database = data.database.clone().unwrap_or(config.database.clone());
     config.server = data.server.clone().unwrap_or(config.server.clone());
+    config.ldap = data.ldap.clone().unwrap_or(config.ldap.clone());
 
     if data.server.is_some() || data.unifi.is_some() || data.database.is_some() {
         tokio::spawn(async {

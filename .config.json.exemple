@@ -47,6 +47,15 @@
     "users": {
         "default_group": "Guest",
         "registrations_open": true
+    },
+
+    "ldap": {
+        "server": "",
+        "base_dn": "",
+        "user_service": "",
+        "password": "",
+        "approvers_search": [],
+        "users_search": []
     }
 
 }
