@@ -1,16 +1,25 @@
 use crate::{
-    model::{
-        entity::client::{Client, ClientStatus},
-        repository::{Repository, mongo_repository::MongoRepository},
-    },
-    unifi::unifi::{DeviceInfo, UnifiController},
+    configurations::config::{ApproversConfig, LdapConfig, UsersConfig}, ldap::ldap::LdapConnection, model::{
+        entity::{approver::Approver, client::{Client, ClientStatus}, user::User},
+        repository::{mongo_repository::MongoRepository, Repository},
+    }, unifi::unifi::{DeviceInfo, UnifiController}
 };
+use bcrypt::{hash, DEFAULT_COST};
+use ldap3::LdapConn;
 use rocket_db_pools::mongodb::Database;
+
+use super::generator;
 
 // Struct
 pub struct ClientsMonitoring {
     repo: MongoRepository<Client>,
     unifi: UnifiController,
+}
+
+pub struct LdapMonitoring {
+    config: LdapConfig,
+    users_repo: MongoRepository<User>,
+    approvers_repo: MongoRepository<Approver>
 }
 
 // Impls
@@ -79,6 +88,57 @@ impl ClientsMonitoring {
                     c.tx_bytes = device.tx_bytes.clone();
                 }
             }
+        }
+    }
+}
+
+#[allow(unused)]
+impl LdapMonitoring {
+    pub fn new(database: Database, config: LdapConfig) -> Self {
+        Self {
+            config,
+            users_repo: MongoRepository::new(database.clone()),
+            approvers_repo: MongoRepository::new(database),
+        }
+    }
+
+    pub async fn scan_approvers(&self, conn: &mut LdapConn, ldap: &LdapConnection, config: &ApproversConfig) {
+        let approvers = self.approvers_repo.find_all().await;
+
+        for group in &self.config.approvers_search {
+            if let Ok(entitys) = ldap.get_users_in_group(conn, group) {
+                for e in &entitys {
+                    let op = approvers.iter().find( |a| a.username == e.username );
+                    if let Some(_) = op { continue; }
+
+                    let mut approver = Approver::new_wiht_ldap_user(e);
+                    let new_code = generator::generator_code(config.code_size);
+                    approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
+                    approver.create_validity(config.validity_days_code.clone() as i64);
+                    approver.approved_types.push(config.default_group.clone());
+
+                    let _ = self.approvers_repo.save(approver).await;
+                }
+            }  
+        }
+        
+    }
+
+    pub async fn scan_users(&self, conn: &mut LdapConn, ldap: &LdapConnection, config: &UsersConfig) {
+        let users = self.users_repo.find_all().await;
+
+        for group in &self.config.users_search {
+            if let Ok(entitys) = ldap.get_users_in_group(conn, group) {
+                for e in &entitys {
+                    let op = users.iter().find( |a| a.username == e.username );
+                    if let Some(_) = op { continue; }
+
+                    let mut user = User::new_with_ldap_user(e);
+                    user.data.client_type = config.default_group.clone();
+
+                    let _ = self.users_repo.save(user).await;
+                }
+            }  
         }
     }
 }
