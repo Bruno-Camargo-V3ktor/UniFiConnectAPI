@@ -11,6 +11,7 @@ pub struct LdapConnection {
 }
 
 pub struct LdapUser {
+    pub username: String,
     pub name: String,
     pub email: String,
 }
@@ -70,10 +71,11 @@ impl LdapConnection {
     
         if let Some(entry) = entries.get(0) {
             let search_entry = SearchEntry::construct(entry.clone());
+            let username = search_entry.attrs.get("sAMAccountName").and_then(|v| v.get(0)).cloned().unwrap_or_else(|| "---".to_string());
             let name = search_entry.attrs.get("cn").and_then(|v| v.get(0)).cloned().unwrap_or_else(|| "Desconhecido".to_string());
             let email = search_entry.attrs.get("mail").and_then(|v| v.get(0)).cloned().unwrap_or_else(|| "".to_string());
     
-            return Ok(Some(LdapUser { name, email }));
+            return Ok(Some(LdapUser { username, name, email }));
         }
     
         Ok(None)
