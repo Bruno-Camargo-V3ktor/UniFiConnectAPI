@@ -85,7 +85,7 @@ pub struct ConfigApplication {
     pub approvers: ApproversConfig,
     pub admins: AdminsConfig,
     pub users: UsersConfig,
-    pub ldap: LdapConfig
+    pub ldap: Option<LdapConfig>
 }
 
 #[derive(Serialize, Deserialize, Clone)]
