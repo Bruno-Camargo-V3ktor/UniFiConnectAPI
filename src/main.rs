@@ -13,6 +13,7 @@ use controllers::client_controller::{self, client_connect_page, client_register}
 use controllers::error_controller::handles;
 use controllers::{approver_controller, config_controller, user_controller};
 use db::mongo_db::MongoDb;
+use ldap::ldap::LdapConnection;
 use rocket::fs::FileServer;
 use rocket::tokio::{
     self,
@@ -25,7 +26,7 @@ use rocket_db_pools::mongodb::Client;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use unifi::unifi::UnifiController;
-use utils::monitoring::ClientsMonitoring;
+use utils::monitoring::{ClientsMonitoring, LdapMonitoring};
 
 ///////////////////////////////////////////
 
@@ -41,6 +42,9 @@ async fn start() -> _ {
         config.unifi.password.clone(),
     )
     .await;
+
+    // Starting scan LDAP
+    tokio::spawn(monitoring_ldap(config.clone()));
 
     // Starting monitoring clients
     tokio::spawn(monitoring_clients(unifi.clone(), config.clone()));
@@ -70,6 +74,40 @@ fn api_routes() -> Vec<Route> {
 
     routes
 }
+
+// Creating monitoring that will take place in X amount of time to integrate with LDAP
+async fn monitoring_ldap(config: ConfigApplication) {
+    if let Some(ldap) = config.ldap.clone() {
+
+        let client = Client::with_uri_str(config.database.get_formated_url())
+        .await
+        .unwrap();
+
+        let db = client.default_database().unwrap();
+
+        let connection = LdapConnection::new(ldap.clone());
+        let monitoring = LdapMonitoring::new(db, ldap.clone());
+        
+        let mut interval = time::interval(Duration::from_secs(20));
+        let conn_res = connection.create_connection().await;
+
+        match conn_res {
+            Ok(mut conn) => {
+                loop {
+                    monitoring.scan_approvers(&mut conn, &connection, &config.approvers).await;
+                    monitoring.scan_users(&mut conn, &connection, &config.users).await;
+        
+                    interval.tick().await;
+                }
+            }
+
+            Err(e) => println!("{e:?}")
+        }
+
+        
+    }
+}
+
 
 // Creating monitoring that will happen in X time to align with UniFi information
 async fn monitoring_clients(unifi: UnifiController, config: ConfigApplication) {

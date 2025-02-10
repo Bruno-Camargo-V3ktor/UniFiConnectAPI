@@ -1,6 +1,6 @@
 
 use crate::configurations::config::LdapConfig;
-use ldap3::{LdapConn, Scope, SearchEntry, result::Result};
+use ldap3::{result::Result, Ldap, LdapConnAsync, Scope, SearchEntry};
 
 // Structs
 pub struct LdapConnection {
@@ -10,6 +10,7 @@ pub struct LdapConnection {
     pub base_dn: String,
 }
 
+#[derive(Debug)]
 pub struct LdapUser {
     pub username: String,
     pub name: String,
@@ -29,32 +30,30 @@ impl LdapConnection {
         ldap
     }
 
+    pub async fn create_connection(&self) -> Result<Ldap> {
+        let (conn, mut ldap) = LdapConnAsync::new(&self.server).await?;
+        ldap3::drive!(conn);
+        ldap.simple_bind(&self.username, &self.password).await?.success()?;
 
-    pub fn create_connection(&self) -> Result<LdapConn> {
-        let mut conn = LdapConn::new(&self.server)?;
-        conn.simple_bind(&self.username, &self.password)?.success()?;
-
-        Ok(conn)
+        Ok(ldap)
     }
 
-    pub fn get_users_in_group(&self, conn: &mut LdapConn, group_name: &str) -> Result<Vec<LdapUser>> {
+    pub async fn get_users_in_group(&self, conn: &mut Ldap, group_name: &str) -> Result<Vec<LdapUser>> {
         let mut users = vec![];
         let filter = format!("(cn={})", group_name);
         
         
-        let (entries, _res) = conn.search(&self.base_dn, Scope::Subtree, &filter, vec!["member"])?.success()?;
+        let (entries, _res) = conn.search(&self.base_dn, Scope::Subtree, &filter, vec!["member"]).await?.success()?;
 
         if entries.is_empty() {
             return Ok(users);
         }
 
-        let mut users = Vec::new();
-
         for entry in entries {
             let search_entry = SearchEntry::construct(entry);
             if let Some(members) = search_entry.attrs.get("member") {
                 for member_dn in members {
-                    if let Some(user) = self.get_user_details(conn, member_dn)? {
+                    if let Some(user) = self.get_user_details(conn, member_dn).await? {
                         users.push(user);
                     }
                 }
@@ -64,10 +63,10 @@ impl LdapConnection {
         Ok(users)
     }
 
-    pub fn get_user_details(&self, ldap: &mut LdapConn, user_dn: &str) -> Result<Option<LdapUser>> {
+    pub async fn get_user_details(&self, ldap: &mut Ldap, user_dn: &str) -> Result<Option<LdapUser>> {
         let filter = format!("(distinguishedName={})", user_dn);
     
-        let (entries, _res) = ldap.search(user_dn, Scope::Base, &filter, vec!["cn", "mail"])?.success()?;
+        let (entries, _res) = ldap.search(user_dn, Scope::Base, &filter, vec!["cn", "mail", "sAMAccountName"]).await?.success()?;
     
         if let Some(entry) = entries.get(0) {
             let search_entry = SearchEntry::construct(entry.clone());

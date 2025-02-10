@@ -5,7 +5,7 @@ use crate::{
     }, unifi::unifi::{DeviceInfo, UnifiController}
 };
 use bcrypt::{hash, DEFAULT_COST};
-use ldap3::LdapConn;
+use ldap3::Ldap;
 use rocket_db_pools::mongodb::Database;
 
 use super::generator;
@@ -102,11 +102,11 @@ impl LdapMonitoring {
         }
     }
 
-    pub async fn scan_approvers(&self, conn: &mut LdapConn, ldap: &LdapConnection, config: &ApproversConfig) {
+    pub async fn scan_approvers(&self, conn: &mut Ldap, ldap: &LdapConnection, config: &ApproversConfig) {
         let approvers = self.approvers_repo.find_all().await;
 
         for group in &self.config.approvers_search {
-            if let Ok(entitys) = ldap.get_users_in_group(conn, group) {
+            if let Ok(entitys) = ldap.get_users_in_group(conn, group).await {
                 for e in &entitys {
                     let op = approvers.iter().find( |a| a.username == e.username );
                     if let Some(_) = op { continue; }
@@ -124,11 +124,11 @@ impl LdapMonitoring {
         
     }
 
-    pub async fn scan_users(&self, conn: &mut LdapConn, ldap: &LdapConnection, config: &UsersConfig) {
+    pub async fn scan_users(&self, conn: &mut Ldap, ldap: &LdapConnection, config: &UsersConfig) {
         let users = self.users_repo.find_all().await;
 
         for group in &self.config.users_search {
-            if let Ok(entitys) = ldap.get_users_in_group(conn, group) {
+            if let Ok(entitys) = ldap.get_users_in_group(conn, group).await {
                 for e in &entitys {
                     let op = users.iter().find( |a| a.username == e.username );
                     if let Some(_) = op { continue; }

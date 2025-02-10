@@ -21,4 +21,4 @@ bson = "2.13.0"
 jsonwebtoken = "9"
 bcrypt = "0.16"
 rand = "0.9"
-ldap3 = { version = "0.10", features = ["tls"] }
+ldap3 = "0.11"
