@@ -24,7 +24,7 @@ pub async fn admin_page(config: &State<ConfigApp>) -> Result<NamedFile, ()> {
 }
 
 #[post("/admin/login", data = "<data>")]
-pub async fn login(
+pub async fn admin_login(
     data: Json<AdminLogin>,
     repository: MongoRepository<Admin>,
     config: &State<ConfigApp>,
@@ -159,5 +159,5 @@ pub async fn get_admins(
 
 // Functions
 pub fn routes() -> Vec<Route> {
-    routes![login, create_admin, update_admin, delete_admin, get_admins]
+    routes![admin_login, create_admin, update_admin, delete_admin, get_admins]
 }

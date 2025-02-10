@@ -2,7 +2,7 @@ use rand::prelude::*;
 
 // Functions
 pub fn generator_code(size: usize) -> String {
-    let charset = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let charset = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz123456789";
     let mut rng = rand::rng();
     let mut code = String::new();
 
