@@ -1,5 +1,5 @@
 use super::{Entity, client::ClientData};
-use crate::db::mongo_db::serde_object_id;
+use crate::{db::mongo_db::serde_object_id, ldap::ldap::LdapUser};
 use serde::{Deserialize, Serialize};
 
 // Structs
@@ -40,5 +40,27 @@ impl Entity<String> for User {
 
     fn set_id(&mut self, new_id: String) {
         self.id = new_id
+    }
+}
+
+impl User {
+    pub fn new_with_ldap_user(ldap_user: &LdapUser) -> Self {
+        let data = ClientData {
+            full_name: ldap_user.name.clone(),
+            email: ldap_user.email.clone(),
+            client_type: String::new(),
+            phone: String::new(),
+            cpf: None,
+            menssage: None,
+            approver_code: None
+        };
+
+        Self {
+            id: String::new(),
+            username: ldap_user.username.clone(),
+            email: ldap_user.email.clone(),
+            password: String::new(),
+            data
+        }
     }
 }

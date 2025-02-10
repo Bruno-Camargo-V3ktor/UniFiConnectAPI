@@ -1,4 +1,4 @@
-use crate::db::mongo_db::serde_object_id;
+use crate::{db::mongo_db::serde_object_id, ldap::ldap::LdapUser};
 use chrono::{DateTime, Duration, Local, TimeZone};
 use rocket::serde::{Deserialize, Serialize};
 
@@ -76,6 +76,18 @@ impl Approver {
         let validity_date = Local.from_local_datetime(&date).unwrap();
 
         self.validity = Some(validity_date);
+    }
+
+    pub fn new_wiht_ldap_user(ldap_user: &LdapUser) -> Self {
+        Self {
+            id: String::new(),
+            username: ldap_user.username.clone(),
+            email: ldap_user.email.clone(),
+            password: String::new(),
+            secrete_code: String::new(),
+            approved_types: vec![],
+            validity: None
+        }
     }
 }
 
