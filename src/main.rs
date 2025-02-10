@@ -5,6 +5,7 @@ mod model;
 mod security;
 mod unifi;
 mod utils;
+mod ldap;
 
 use configurations::config::ConfigApplication;
 use controllers::admin_controller::{self, admin_page};
