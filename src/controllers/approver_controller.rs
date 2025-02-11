@@ -1,17 +1,15 @@
 use crate::{
-    configurations::config::ConfigApp,
-    model::{
+    configurations::config::ConfigApp, ldap::ldap::LdapConnection, model::{
         entity::{
             admin::Admin,
             approver::{Approver, ApproverCode, ApproverData, ApproverLogin, ApproverUpdate},
         },
-        repository::{Repository, mongo_repository::MongoRepository},
-    },
-    utils::{
+        repository::{mongo_repository::MongoRepository, Repository},
+    }, utils::{
         error::{BadRequest, CustomError, Error, Unauthorized},
         generator,
         responses::{Created, Ok, Response},
-    },
+    }
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
@@ -130,10 +128,23 @@ pub async fn generator_approver_code(
 
     match op_approver {
         Some(mut approver) => {
-            let ok = verify(data.password.clone(), approver.password.as_str()).unwrap_or(false);
-            if !ok {
-                return Err(Error::new_bad_request("Invalid username or password"));
+            if approver.password.is_empty() {
+                if let Some(v) = config.ldap.clone() {
+                    let ldap = LdapConnection::new(v);
+                    let auth = ldap.simple_authentication(&data.username, &data.password).await;
+                    
+                    if !auth {
+                        return Err(Error::new_bad_request("Invalid username or password"));
+                    }
+                }
             }
+            else {
+                let ok = verify(data.password.clone(), approver.password.as_str()).unwrap_or(false);
+                if !ok {
+                    return Err(Error::new_bad_request("Invalid username or password"));
+                }
+            }
+            
 
             let new_code = generator::generator_code(code_size);
             approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
