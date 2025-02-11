@@ -1,20 +1,16 @@
 use crate::{
-    configurations::config::ConfigApp,
-    model::{
+    configurations::config::ConfigApp, ldap::ldap::LdapConnection, model::{
         entity::{
             admin::Admin,
             approver::Approver,
             client::Client,
             user::{User, UserLogin, UserUpdate},
         },
-        repository::{Repository, mongo_repository::MongoRepository},
-    },
-    security::approval_code::validate_code,
-    unifi::unifi::UnifiController,
-    utils::{
+        repository::{mongo_repository::MongoRepository, Repository},
+    }, security::approval_code::validate_code, unifi::unifi::UnifiController, utils::{
         error::{BadRequest, Error, NotFound, Unauthorized},
         responses::{Accepted, Created, Ok, Response},
-    },
+    }
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
@@ -74,10 +70,23 @@ pub async fn login_user(
         .await
     {
         Some(user) => {
-            let valid = verify(data.password.clone(), &user.password).unwrap_or(false);
-            if !valid {
-                return Err(Error::new_bad_request("Username or password invalid"));
+            if user.password.is_empty() {
+                if let Some(v) = config.ldap.clone() {
+                    let ldap = LdapConnection::new(v);
+                    let auth = ldap.simple_authentication(&data.username, &data.password).await;
+                    
+                    if !auth {
+                        return Err(Error::new_bad_request("Invalid username or password"));
+                    }
+                }
             }
+            else {
+                let ok = verify(&data.password, &user.password).unwrap_or(false);
+                if !ok {
+                    return Err(Error::new_bad_request("Invalid username or password"));
+                }
+            }
+
 
             let mut new_client = Client::new_with_data(&user.data);
 
