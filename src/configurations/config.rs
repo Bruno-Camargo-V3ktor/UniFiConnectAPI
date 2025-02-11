@@ -69,6 +69,7 @@ pub struct UsersConfig {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct LdapConfig {
     pub server: String,
+    pub domain: String,
     pub base_dn: String,
     pub user_service: String,
     pub password: String,

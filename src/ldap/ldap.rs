@@ -6,6 +6,7 @@ use ldap3::{result::Result, Ldap, LdapConnAsync, Scope, SearchEntry};
 pub struct LdapConnection {
     pub username: String,
     pub password: String,
+    pub domain: String,
     pub server: String,
     pub base_dn: String,
 }
@@ -23,11 +24,39 @@ impl LdapConnection {
         let ldap = Self {
             username: config.user_service.clone(),
             password: config.password.clone(),
+            domain: config.domain.clone(),
             server: config.server.clone(),
             base_dn: config.base_dn.clone()
         };
 
         ldap
+    }
+
+    pub async fn simple_authentication(&self, username: &str, password: &str) -> bool {
+        let user_dn = format!("{}@{}", username, self.domain);
+
+        match LdapConnAsync::new(&self.server).await {
+            Ok((conn, mut ldap)) => {
+                ldap3::drive!(conn);
+
+                match ldap.simple_bind(&user_dn, &password).await {
+                    Ok(res) => {
+                        if res.success().is_ok() {
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    Err(_) => {return false;}
+                }
+
+            }  
+
+            Err(_) => {
+                return false
+            }
+        }
+
     }
 
     pub async fn create_connection(&self) -> Result<Ldap> {
