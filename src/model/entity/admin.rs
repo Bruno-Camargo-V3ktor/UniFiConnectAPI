@@ -1,4 +1,4 @@
-use crate::db::mongo_db::serde_object_id;
+use crate::{db::mongo_db::serde_object_id, ldap::ldap::LdapUser};
 use rocket::serde::{Deserialize, Serialize};
 
 use super::Entity;
@@ -28,6 +28,18 @@ pub struct AdminData {
 
 
 // Impls
+impl Admin {
+    pub fn new_with_ldap_user(ldpa_user: &LdapUser) -> Self {
+        Self {
+            id: String::new(),
+            name: ldpa_user.name.clone(),
+            username: ldpa_user.username.clone(),
+            password: None
+        }
+    }
+}
+
+
 impl Entity<String> for Admin {
     fn get_id(&self) -> String {
         self.id.clone()

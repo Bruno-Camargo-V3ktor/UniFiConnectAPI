@@ -94,6 +94,7 @@ async fn monitoring_ldap(config: ConfigApplication) {
         match conn_res {
             Ok(mut conn) => {
                 loop {
+                    monitoring.scan_admins(&mut conn, &connection).await;
                     monitoring.scan_approvers(&mut conn, &connection, &config.approvers).await;
                     monitoring.scan_users(&mut conn, &connection, &config.users).await;
         

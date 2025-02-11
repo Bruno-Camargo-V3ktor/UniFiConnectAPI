@@ -55,7 +55,8 @@
         "user_service": "",
         "password": "",
         "approvers_search": [],
-        "users_search": []
+        "users_search": [],
+        "admins_search": []
     }
 
 }

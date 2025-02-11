@@ -74,6 +74,7 @@ pub struct LdapConfig {
     pub password: String,
     pub approvers_search: Vec<String>,
     pub users_search: Vec<String>,
+    pub admins_search: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
