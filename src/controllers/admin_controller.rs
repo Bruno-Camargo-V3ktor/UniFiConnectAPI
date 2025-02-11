@@ -6,6 +6,7 @@ use rocket::serde::json::Json;
 use rocket::{Route, State, delete, get, post, put, routes};
 
 use crate::configurations::config::ConfigApp;
+use crate::ldap::ldap::LdapConnection;
 use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
 use crate::model::repository::Repository;
 use crate::model::repository::mongo_repository::MongoRepository;
@@ -39,16 +40,37 @@ pub async fn admin_login(
 
     match res {
         Some(admin) => {
-            let check = verify(&data.password, admin.password.unwrap().as_str());
-            if let Ok(b) = check {
-                if b {
-                    return Ok(Response::new_accepted(create_token(
-                        &admin.id,
-                        config.server.secret_key.clone(),
-                        config.admins.token_expirantion.clone() as u64,
-                    )));
+
+            match admin.password {
+                Some(p) => {
+                    let check = verify(&data.password, &p);
+                    if let Ok(b) = check {
+                        if b {
+                            return Ok(Response::new_accepted(create_token(
+                                &admin.id,
+                                config.server.secret_key.clone(),
+                                config.admins.token_expirantion.clone() as u64,
+                            )));
+                         }
+                    }
+                }
+
+                None => {
+                    if let Some(v) = config.ldap.clone() {
+                        let ldap = LdapConnection::new(v);
+                        let auth = ldap.simple_authentication(&data.username, &data.password).await;
+
+                        if auth {
+                            return Ok(Response::new_accepted(create_token(
+                                &admin.id,
+                                config.server.secret_key.clone(),
+                                config.admins.token_expirantion.clone() as u64,
+                            )));
+                        }
+                    }
                 }
             }
+
         }
 
         None => {}
