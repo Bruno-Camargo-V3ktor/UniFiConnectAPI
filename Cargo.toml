@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 rocket = { version="0.5.1", features=["json", "secrets"] }
 rocket_db_pools = { version="0.2.0", features=["mongodb"] }
-
+rocket_cors = "0.6"
 
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json", "cookies"] }

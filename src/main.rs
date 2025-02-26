@@ -21,6 +21,7 @@ use rocket::tokio::{
     time::{self, Duration},
 };
 use rocket::{Route, launch, routes};
+use rocket_cors::{AllowedHeaders, AllowedOrigins, CorsOptions};
 use rocket_db_pools::Database;
 use rocket_db_pools::mongodb::Client;
 use std::sync::Arc;
@@ -49,8 +50,25 @@ async fn start() -> _ {
     // Starting monitoring clients
     tokio::spawn(monitoring_clients(unifi.clone(), config.clone()));
 
+    // CORS Configuration
+    let allowed_origins = AllowedOrigins::all();
+
+    let cors = CorsOptions {
+        allowed_origins,
+        // Permite os métodos que você deseja (incluindo PUT, OPTIONS, etc.)
+        allowed_methods: ["PUT", "POST", "GET", "OPTIONS"]
+            .iter()
+            .map(|s| s.parse().unwrap())
+            .collect(),
+        // Permite os cabeçalhos necessários (ex: Content-Type)
+        allowed_headers: AllowedHeaders::some(&["Authorization", "Content-Type", "Accept"]),
+        allow_credentials: true,
+        ..Default::default()
+    }.to_cors().unwrap();
+
     // Rocket Server
     rocket::custom(config.to_rocket_config())
+        .attach(cors)
         .attach(MongoDb::init())
         //
         .manage(Arc::new(Mutex::new(unifi)))
