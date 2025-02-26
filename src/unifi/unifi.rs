@@ -301,7 +301,7 @@ impl UnifiController {
         Ok(list)
     }
 
-    pub async fn conect_client(&mut self, client: &Client, _group: &ClientGroup) {
+    pub async fn conect_client(&mut self, client: &Client, group: &ClientGroup) {
         let _ = self
             .authorize_device(
                 &client.site,
@@ -316,9 +316,9 @@ impl UnifiController {
             .unwrap_or(vec![]);
 
         let device = devices.iter().find(|c| c.mac == client.mac.clone());
-        
+
         if let Some(d) = device {
-            let name = format!("{} ({})", client.full_name.clone(), client.approver.clone());
+            let name = format!("{} ({})", client.full_name.clone(), group.name.clone());
             let _ = self
                 .rename_device(d.record_id.clone().unwrap(), client.site.clone(), name)
                 .await;
