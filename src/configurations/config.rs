@@ -51,6 +51,7 @@ pub struct ClientsConfig {
 pub struct ApproversConfig {
     pub code_size: usize,
     pub validity_days_code: usize,
+    pub just_numbers: bool,
     pub default_group: String,
 }
 

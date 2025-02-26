@@ -119,6 +119,7 @@ pub async fn generator_approver_code(
 ) -> Result<Ok<ApproverCode>, BadRequest> {
     let config = config.read().await;
     let code_size = config.approvers.code_size.clone();
+    let just_numbers = config.approvers.just_numbers.clone();
 
     let op_approver = repository
         .find_one(doc! {
@@ -146,7 +147,7 @@ pub async fn generator_approver_code(
             }
             
 
-            let new_code = generator::generator_code(code_size);
+            let new_code = generator::generator_code(code_size, just_numbers);
             approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
             approver.create_validity(config.approvers.validity_days_code.clone() as i64);
 

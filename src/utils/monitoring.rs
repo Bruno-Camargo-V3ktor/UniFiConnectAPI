@@ -117,7 +117,7 @@ impl LdapMonitoring {
                     }
 
                     let mut approver = Approver::new_wiht_ldap_user(e);
-                    let new_code = generator::generator_code(config.code_size);
+                    let new_code = generator::generator_code(config.code_size, config.just_numbers);
                     approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
                     approver.create_validity(config.validity_days_code.clone() as i64);
                     approver.approved_types.push(config.default_group.clone());

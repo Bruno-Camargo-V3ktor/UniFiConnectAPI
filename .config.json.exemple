@@ -35,6 +35,7 @@
 
     "approvers": {
         "code_size": 8,
+        "just_numbers": false,
         "validity_days_code": 1
         "default_group": "Guest"
     },
