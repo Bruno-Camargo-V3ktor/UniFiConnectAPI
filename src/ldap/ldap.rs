@@ -33,6 +33,10 @@ impl LdapConnection {
     }
 
     pub async fn simple_authentication(&self, username: &str, password: &str) -> bool {
+        if username.is_empty() || password.is_empty() {
+            return false;
+        }
+        
         let user_dn = format!("{}@{}", username, self.domain);
 
         match LdapConnAsync::new(&self.server).await {
