@@ -5,10 +5,10 @@ use crate::{
         entity::{
             admin::Admin,
             approver::Approver,
-            client::Client,
+            client::{Client, ClientStatus},
             user::{User, UserLogin, UserUpdate},
         },
-        repository::{Repository, mongo_repository::MongoRepository},
+        repository::{mongo_repository::MongoRepository, Repository},
     },
     security::approval_code::validate_code,
     unifi::unifi::UnifiController,
@@ -126,6 +126,7 @@ pub async fn login_user(
             new_client.site = site.clone();
             new_client.mac = mac.clone();
             new_client.time_connection = minutes.to_string();
+            new_client.status = ClientStatus::Approved;
 
             unifi.conect_client(&new_client, &group).await;
             let _ = client_repo.save(new_client).await;
