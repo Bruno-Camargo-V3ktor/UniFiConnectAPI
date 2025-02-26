@@ -272,6 +272,35 @@ impl UnifiController {
         Ok(list)
     }
 
+    pub async fn get_all_devices(&self, site: String, is_guest: bool) -> Result<Vec<DeviceInfo>, reqwest::Error> {
+        let res = self
+            .client
+            .get(format!("{}/s/{}/stat/sta", self.base_url, site))
+            .send()
+            .await?;
+
+        let res = res.json::<ApiResponse>().await?;
+        let mut list: Vec<DeviceInfo> = vec![];
+
+        match res.data {
+            Value::Array(array) => {
+                let clients: Result<Vec<DeviceInfo>, _> =
+                    serde_json::from_value(Value::Array(array));
+
+                if let Ok(cs) = clients {
+                    let mut cs = cs;
+                    if is_guest {
+                        cs = cs.into_iter().filter(|d| d.is_guest.unwrap_or(false)).collect();
+                    }
+                    list = cs
+                }
+            }
+            _ => {}
+        }
+
+        Ok(list)
+    }
+
     pub async fn conect_client(&mut self, client: &Client, _group: &ClientGroup) {
         let _ = self
             .authorize_device(
@@ -282,10 +311,12 @@ impl UnifiController {
             .await;
 
         let devices = self
-            .get_guest_devices(client.site.clone())
+            .get_all_devices(client.site.clone(), true)
             .await
             .unwrap_or(vec![]);
+
         let device = devices.iter().find(|c| c.mac == client.mac.clone());
+        
         if let Some(d) = device {
             let name = format!("{} ({})", client.full_name.clone(), client.approver.clone());
             let _ = self
