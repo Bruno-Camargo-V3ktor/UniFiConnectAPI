@@ -1,16 +1,21 @@
 use crate::{
-    configurations::config::ConfigApp, ldap::ldap::LdapConnection, model::{
+    configurations::config::ConfigApp,
+    ldap::ldap::LdapConnection,
+    model::{
         entity::{
             admin::Admin,
             approver::Approver,
             client::Client,
             user::{User, UserLogin, UserUpdate},
         },
-        repository::{mongo_repository::MongoRepository, Repository},
-    }, security::approval_code::validate_code, unifi::unifi::UnifiController, utils::{
+        repository::{Repository, mongo_repository::MongoRepository},
+    },
+    security::approval_code::validate_code,
+    unifi::unifi::UnifiController,
+    utils::{
         error::{BadRequest, Error, NotFound, Unauthorized},
         responses::{Accepted, Created, Ok, Response},
-    }
+    },
 };
 use bcrypt::{DEFAULT_COST, hash, verify};
 use bson::doc;
@@ -61,6 +66,7 @@ pub async fn login_user(
     mut unifi: UnifiController,
     user_repo: MongoRepository<User>,
     approver_repo: MongoRepository<Approver>,
+    client_repo: MongoRepository<Client>,
     config: &State<ConfigApp>,
 ) -> Result<Accepted<String>, BadRequest> {
     let config = config.read().await;
@@ -73,24 +79,25 @@ pub async fn login_user(
             if user.password.is_empty() {
                 if let Some(v) = config.ldap.clone() {
                     let ldap = LdapConnection::new(v);
-                    let auth = ldap.simple_authentication(&data.username, &data.password).await;
-                    
+                    let auth = ldap
+                        .simple_authentication(&data.username, &data.password)
+                        .await;
+
                     if !auth {
                         return Err(Error::new_bad_request("Invalid username or password"));
                     }
                 }
-            }
-            else {
+            } else {
                 let ok = verify(&data.password, &user.password).unwrap_or(false);
                 if !ok {
                     return Err(Error::new_bad_request("Invalid username or password"));
                 }
             }
 
-
             let mut new_client = Client::new_with_data(&user.data);
+            let target_group = data.group.clone().unwrap_or(user.data.client_type.clone());
 
-            if user.data.client_type != data.group.clone().unwrap_or("".to_string()) {
+            if user.data.client_type != target_group {
                 let d = data.group.clone().unwrap();
 
                 let ap = validate_code(
@@ -117,6 +124,7 @@ pub async fn login_user(
             new_client.time_connection = minutes.to_string();
 
             unifi.conect_client(&new_client, &group).await;
+            let _ = client_repo.save(new_client).await;
 
             return Ok(Response::new_accepted(String::from("Connection Approved")));
         }
