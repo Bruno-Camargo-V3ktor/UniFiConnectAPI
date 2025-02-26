@@ -39,8 +39,7 @@ pub struct ClientGroup {
     pub time_conneciton: usize,
     pub permissions: Vec<String>,
     pub restrictions: Vec<String>,
-    pub upload_limit: usize,
-    pub download_limit: usize,
+    pub public: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -87,7 +86,7 @@ pub struct ConfigApplication {
     pub approvers: ApproversConfig,
     pub admins: AdminsConfig,
     pub users: UsersConfig,
-    pub ldap: Option<LdapConfig>
+    pub ldap: Option<LdapConfig>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -99,7 +98,7 @@ pub struct ConfigUpdate {
     pub approvers: Option<ApproversConfig>,
     pub admins: Option<AdminsConfig>,
     pub users: Option<UsersConfig>,
-    pub ldap: Option<LdapConfig>
+    pub ldap: Option<LdapConfig>,
 }
 
 // Impls
