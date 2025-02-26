@@ -32,7 +32,7 @@ pub async fn create_user(
     let config = config.read().await;
     let mut user = data.into_inner();
 
-    if !config.users.registrations_open {
+    if !config.users.registrations_open && admin.is_none() {
         match admin {
             Some(_) => {}
             None => return Err(Error::new_bad_request("Closed")),
@@ -98,23 +98,27 @@ pub async fn login_user(
             let target_group = data.group.clone().unwrap_or(user.data.client_type.clone());
 
             if user.data.client_type != target_group {
-                let d = data.group.clone().unwrap();
+                let group = config.clients.find_group(&target_group).unwrap();
 
-                let ap = validate_code(
-                    data.approver_code.clone().unwrap_or("".to_string()),
-                    &d,
-                    &approver_repo,
-                )
-                .await;
+                if !group.public {
+                    let d = data.group.clone().unwrap();
 
-                if let None = ap {
-                    return Err(Error::new_bad_request("Username or password invalid"));
+                    let ap = validate_code(
+                        data.approver_code.clone().unwrap_or("".to_string()),
+                        &d,
+                        &approver_repo,
+                    )
+                    .await;
+
+                    if let None = ap {
+                        return Err(Error::new_bad_request("Username or password invalid"));
+                    }
+
+                    new_client.approver = ap.unwrap();
                 }
-
-                new_client.approver = ap.unwrap();
             }
 
-            let group = config.clients.find_group(&user.data.client_type).unwrap();
+            let group = config.clients.find_group(&target_group).unwrap();
             let mac = cookies.get("id").unwrap().value().to_string();
             let site = cookies.get("site").unwrap().value().to_string();
             let minutes: u16 = group.time_conneciton.clone() as u16;

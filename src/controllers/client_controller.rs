@@ -140,6 +140,15 @@ pub async fn client_connection_approver(
     new_client.mac = mac.clone();
     new_client.time_connection = minutes.to_string();
 
+    // Approval Public
+    if group.public {
+        new_client.status = ClientStatus::Approved;
+        unifi.conect_client(&new_client, &group).await;
+        let _ = repository.save(new_client).await;
+
+        return Ok(Response::new_custom_status(202));
+    }
+
     // Approval by code
     if let Some(code) = client.approver_code {
         let approver = validate_code(code, &client.client_type, &approver_repository).await;
