@@ -7,7 +7,7 @@ use rocket::{Route, State, delete, get, post, put, routes};
 
 use crate::configurations::config::ConfigApp;
 use crate::ldap::ldap::LdapConnection;
-use crate::model::entity::admin::{Admin, AdminData, AdminLogin};
+use crate::model::entity::admin::{Admin, AdminData, AdminLogin, AdminToken};
 use crate::model::repository::Repository;
 use crate::model::repository::mongo_repository::MongoRepository;
 use crate::security::auth_jwt::create_token;
@@ -29,7 +29,7 @@ pub async fn admin_login(
     data: Json<AdminLogin>,
     repository: MongoRepository<Admin>,
     config: &State<ConfigApp>,
-) -> Result<Accepted<String>, BadRequest> {
+) -> Result<Accepted<AdminToken>, BadRequest> {
     let config = config.read().await;
 
     let res = repository
@@ -46,11 +46,15 @@ pub async fn admin_login(
                     let check = verify(&data.password, &p);
                     if let Ok(b) = check {
                         if b {
-                            return Ok(Response::new_accepted(create_token(
-                                &admin.id,
-                                config.server.secret_key.clone(),
-                                config.admins.token_expirantion.clone() as u64,
-                            )));
+                            let token = AdminToken {
+                                token: create_token(
+                                    &admin.id,
+                                    config.server.secret_key.clone(),
+                                    config.admins.token_expirantion.clone() as u64,
+                                )
+                            };
+
+                            return Ok(Response::new_accepted(token));
                          }
                     }
                 }
@@ -61,11 +65,15 @@ pub async fn admin_login(
                         let auth = ldap.simple_authentication(&data.username, &data.password).await;
 
                         if auth {
-                            return Ok(Response::new_accepted(create_token(
-                                &admin.id,
-                                config.server.secret_key.clone(),
-                                config.admins.token_expirantion.clone() as u64,
-                            )));
+                             let token = AdminToken {
+                                token: create_token(
+                                    &admin.id,
+                                    config.server.secret_key.clone(),
+                                    config.admins.token_expirantion.clone() as u64,
+                                )
+                            };
+
+                            return Ok(Response::new_accepted(token));
                         }
                     }
                 }
