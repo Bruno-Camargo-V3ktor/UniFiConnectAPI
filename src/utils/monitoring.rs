@@ -5,9 +5,10 @@ use crate::{
     }, unifi::unifi::{DeviceInfo, UnifiController}
 };
 use bcrypt::{hash, DEFAULT_COST};
+use chrono::Local;
 use ldap3::Ldap;
 use rocket_db_pools::mongodb::Database;
-
+use bson::{doc, oid::ObjectId, DateTime};
 use super::generator;
 
 // Struct
@@ -75,6 +76,14 @@ impl ClientsMonitoring {
             if let Some(device) = d {
                 if device.expired.unwrap_or(true) {
                     c.status = ClientStatus::Expired;
+                    &self.repo.update_all(
+                        doc!{
+                            "_id": ObjectId::parse_str(&c.id).unwrap()
+                        },
+                        
+                        doc!{
+                            "expiresAt": DateTime::from_millis(Local::now().timestamp())
+                    });
                 }
 
                 if device.hostname.is_some() {
@@ -91,6 +100,7 @@ impl ClientsMonitoring {
             }
         }
     }
+
 }
 
 #[allow(unused)]

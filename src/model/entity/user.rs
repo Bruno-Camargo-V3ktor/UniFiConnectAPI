@@ -47,6 +47,7 @@ impl User {
     pub fn new_with_ldap_user(ldap_user: &LdapUser) -> Self {
         let data = ClientData {
             full_name: ldap_user.name.clone(),
+            companion: String::new(),
             email: ldap_user.email.clone(),
             client_type: String::new(),
             phone: String::new(),
