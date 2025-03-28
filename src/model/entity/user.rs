@@ -17,8 +17,6 @@ pub struct User {
 pub struct UserLogin {
     pub username: String,
     pub password: String,
-    pub group: Option<String>,
-    pub approver_code: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -49,7 +47,6 @@ impl User {
             full_name: ldap_user.name.clone(),
             companion: String::new(),
             email: ldap_user.email.clone(),
-            client_type: String::new(),
             phone: String::new(),
             cpf: None,
             menssage: None,

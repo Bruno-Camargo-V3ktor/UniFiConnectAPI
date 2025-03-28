@@ -23,21 +23,13 @@
     },
 
     "clients": {
-        "groups": [
-            {   "name": "Guest",
-                "time_conneciton": 180,
-                "permissions": [],
-                "restrictions": [],
-                "public": false
-            }
-        ]
+      "time_connection": 180
     },
 
     "approvers": {
         "code_size": 8,
         "just_numbers": false,
         "validity_days_code": 1
-        "default_group": "Guest"
     },
 
     "admins": {
@@ -45,8 +37,7 @@
     },
 
     "users": {
-        "default_group": "Guest",
-        "registrations_open": true
+      "registrations_open": true
     },
 
     "ldap": {

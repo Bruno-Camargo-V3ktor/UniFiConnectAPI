@@ -17,7 +17,6 @@ pub enum ClientStatus {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientData {
     pub full_name: String,
-    pub client_type: String,
     pub companion: String,
     pub email: String,
     pub phone: String,
@@ -40,7 +39,6 @@ pub struct ClientInfo {
 pub struct Client {
     #[serde(rename = "_id", with = "serde_object_id")]
     pub id: String,
-    pub client_type: String,
 
     pub full_name: String,
     pub companion: String,
@@ -67,7 +65,6 @@ impl Client {
     pub fn new() -> Self {
         Self {
             id: String::new(),
-            client_type: String::new(),
             full_name: String::from("---"),
             companion: String::from("---"),
             email: String::from("---"),
@@ -86,9 +83,8 @@ impl Client {
     }
 
     pub fn new_with_data(data: &ClientData) -> Self {
-        let client = Self {
+        Self {
             id: String::new(),
-            client_type: data.client_type.clone(),
             full_name: data.full_name.clone(),
             companion: data.companion.clone(),
             email: data.email.clone(),
@@ -102,16 +98,13 @@ impl Client {
             rx_bytes: None,
             time_connection: String::from("0"),
             start_time: Local::now(),
-            approver: String::from("---"),
-        };
-
-        client
+            approver: String::from("---") 
+        }
     }
 
     pub fn new_with_info(info: &ClientInfo) -> Self {
         let mut client = Self {
             id: String::new(),
-            client_type: String::from("Undefined"),
             full_name: String::from("---"),
             companion: String::from("---"),
             email: String::from("---"),
@@ -119,7 +112,7 @@ impl Client {
             cpf: Some(String::from("---")),
             mac: info.mac.clone(),
             site: info.site.clone(),
-            status: if info.connect.clone() {
+            status: if info.connect {
                 ClientStatus::Approved
             } else {
                 ClientStatus::Reject
@@ -133,11 +126,11 @@ impl Client {
         };
 
         if let Some(data) = info.data.clone() {
-            client.client_type = data.client_type;
             client.full_name = data.full_name;
             client.email = data.email;
             client.phone = data.phone;
             client.cpf = data.cpf;
+            client.companion = data.companion;
         }
 
         client

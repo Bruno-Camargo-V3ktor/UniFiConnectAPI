@@ -130,7 +130,6 @@ impl LdapMonitoring {
                     let new_code = generator::generator_code(config.code_size, config.just_numbers);
                     approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
                     approver.create_validity(config.validity_days_code.clone() as i64);
-                    approver.approved_types.push(config.default_group.clone());
 
                     let _ = self.approvers_repo.save(approver).await;
                 }
@@ -155,9 +154,7 @@ impl LdapMonitoring {
                         continue; 
                     }
 
-                    let mut user = User::new_with_ldap_user(e);
-                    user.data.client_type = config.default_group.clone();
-
+                    let user = User::new_with_ldap_user(e);
                     let _ = self.users_repo.save(user).await;
                 }
             }  

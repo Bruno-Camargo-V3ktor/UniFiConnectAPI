@@ -34,17 +34,8 @@ pub struct UnifiConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
-pub struct ClientGroup {
-    pub name: String,
-    pub time_conneciton: usize,
-    pub permissions: Vec<String>,
-    pub restrictions: Vec<String>,
-    pub public: bool,
-}
-
-#[derive(Serialize, Deserialize, Clone)]
 pub struct ClientsConfig {
-    pub groups: Vec<ClientGroup>,
+    pub time_connection: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -52,7 +43,6 @@ pub struct ApproversConfig {
     pub code_size: usize,
     pub validity_days_code: usize,
     pub just_numbers: bool,
-    pub default_group: String,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -62,7 +52,6 @@ pub struct AdminsConfig {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct UsersConfig {
-    pub default_group: String,
     pub registrations_open: bool,
 }
 
@@ -117,17 +106,17 @@ impl ConfigApplication {
     pub fn save(&self) {
         let json_str = serde_json::to_string_pretty(&self).unwrap();
         let mut file = File::create(".config.json").expect("Configuration file not found");
-        file.write(json_str.as_bytes())
+        file.write_all(json_str.as_bytes())
             .expect("Error saving settings file");
     }
 
     pub fn to_rocket_config(&self) -> rocket::figment::Figment {
         let config = rocket::Config {
             address: self.server.address.parse().unwrap(),
-            port: self.server.port.clone(),
+            port: self.server.port,
             workers: self.server.workers,
             log_level: self.server.log_level.parse().unwrap(),
-            keep_alive: self.server.keep_alive.clone(),
+            keep_alive: self.server.keep_alive,
             secret_key: SecretKey::from(self.server.secret_key.as_bytes()),
             ..rocket::Config::default()
         };
@@ -157,8 +146,3 @@ impl DatabaseConfig {
     }
 }
 
-impl ClientsConfig {
-    pub fn find_group(&self, name: &String) -> Option<&ClientGroup> {
-        self.groups.iter().find(|g| g.name == *name)
-    }
-}

@@ -55,28 +55,20 @@ pub async fn client_connection_api(
     repository: MongoRepository<Client>,
     data: Json<ClientInfo>,
     admin: Admin,
-    config: &State<ConfigApp>,
+    _config: &State<ConfigApp>,
 ) -> Result<CustomStatus, CustomError> {
-    let config = config.read().await;
+    //let config = config.read().await;
     let client = data.into_inner();
 
     // Approving a pending order
     if let Some(id) = client.id.clone() {
         if let Some(mut c) = repository.find_by_id(id).await {
             if client.connect {
-                let group = {
-                    if let Some(g) = config.clients.find_group(&c.client_type) {
-                        g
-                    } else {
-                        return Err(Error::new_bad_request("Invalid Fields"));
-                    }
-                };
-
                 c.approver = admin.name;
                 c.status = ClientStatus::Approved;
                 c.start_time = Local::now();
 
-                let _ = unifi.conect_client(&c, &group).await;
+                let _ = unifi.conect_client(&c).await;
             } else {
                 c.status = ClientStatus::Reject;
             }
@@ -91,14 +83,8 @@ pub async fn client_connection_api(
     let mut new_client = Client::new_with_info(&client);
     new_client.approver = admin.name;
 
-    let group = if let Some(g) = config.clients.find_group(&new_client.client_type) {
-        g
-    } else {
-        return Err(Error::new_bad_request("Invalid Fields"));
-    };
-
     if client.connect {
-        unifi.conect_client(&new_client, &group).await;
+        unifi.conect_client(&new_client).await;
         let _ = repository.save(new_client).await;
     } else {
         let _ = unifi.unauthorize_device(&client.site, &client.mac).await;
@@ -123,35 +109,18 @@ pub async fn client_connection_approver(
         return Err(Error::new_bad_request("Invalid Form Field(s)"));
     }
 
-    let group = {
-        if let Some(g) = config.clients.find_group(&client.client_type) {
-            g
-        } else {
-            return Err(Error::new_bad_request("Invalid Fields"));
-        }
-    };
-
     let mac = cookies.get("id").unwrap().value().to_string();
     let site = cookies.get("site").unwrap().value().to_string();
-    let minutes: u16 = group.time_conneciton.clone() as u16;
+    let minutes: u16 = config.clients.time_connection as u16;
 
     let mut new_client = Client::new_with_data(&client);
     new_client.site = site.clone();
     new_client.mac = mac.clone();
     new_client.time_connection = minutes.to_string();
 
-    // Approval Public
-    if group.public {
-        new_client.status = ClientStatus::Approved;
-        unifi.conect_client(&new_client, &group).await;
-        let _ = repository.save(new_client).await;
-
-        return Ok(Response::new_custom_status(202));
-    }
-
     // Approval by code
     if let Some(code) = client.approver_code {
-        let approver = validate_code(code, &client.client_type, &approver_repository).await;
+        let approver = validate_code(code, &approver_repository).await;
         if approver.is_none() {
             return Err(Error::new_bad_request("Invalid Fields"));
         }
@@ -159,7 +128,7 @@ pub async fn client_connection_approver(
         new_client.status = ClientStatus::Approved;
         new_client.approver = approver.unwrap();
 
-        unifi.conect_client(&new_client, &group).await;
+        unifi.conect_client(&new_client).await;
         let _ = repository.save(new_client).await;
 
         return Ok(Response::new_custom_status(202));
@@ -167,7 +136,7 @@ pub async fn client_connection_approver(
 
     // Approval pending
     let _ = repository.save(new_client).await;
-    return Ok(Response::new_custom_status(200));
+    Ok(Response::new_custom_status(200))
 }
 
 #[get("/client", format = "application/json")]

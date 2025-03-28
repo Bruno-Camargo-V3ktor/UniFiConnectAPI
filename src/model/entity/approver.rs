@@ -12,8 +12,7 @@ pub struct Approver {
     pub username: String,
     pub email: String,
     pub password: String,
-    pub secrete_code: String,
-    pub approved_types: Vec<String>,
+    pub secrete_code: String, 
     pub validity: Option<DateTime<Local>>,
 }
 
@@ -41,7 +40,6 @@ pub struct ApproverCode {
 pub struct ApproverUpdate {
     pub email: Option<String>,
     pub password: Option<String>,
-    pub approved_types: Option<Vec<String>>,
     pub secrete_code: Option<String>,
 }
 
@@ -85,7 +83,6 @@ impl Approver {
             email: ldap_user.email.clone(),
             password: String::new(),
             secrete_code: String::new(),
-            approved_types: vec![],
             validity: None
         }
     }

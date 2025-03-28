@@ -43,7 +43,6 @@ pub async fn create_approver(
         email: approver.email,
         password: approver.password,
         validity: None,
-        approved_types: vec!["Guest".to_string()],
         secrete_code: approver.secrete_code,
     };
     approver.create_validity(config.approvers.validity_days_code.clone() as i64);
@@ -102,9 +101,6 @@ pub async fn update_approver(
             new_code
         })
         .unwrap_or(approver.secrete_code);
-    approver.approved_types = approver_data
-        .approved_types
-        .unwrap_or(approver.approved_types);
 
     let _ = repository.update(approver).await;
 

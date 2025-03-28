@@ -95,12 +95,10 @@ pub async fn create_admin(
 ) -> Result<Created<()>, CustomError> {
     let data = data.into_inner();
 
-    let res = repository
+    if repository
         .find_one(doc! { "username": data.username.clone() })
-        .await;
-    match res {
-        Some(_) => return Err(Error::new_bad_request("Username already registered")),
-        None => {}
+        .await.is_some() {
+        return Err(Error::new_bad_request("Username already registered"));
     }
 
     let mut new_admin = Admin {

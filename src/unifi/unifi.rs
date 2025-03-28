@@ -7,7 +7,6 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
-use crate::configurations::config::ClientGroup;
 use crate::model::entity::client::Client;
 
 // Types
@@ -301,7 +300,7 @@ impl UnifiController {
         Ok(list)
     }
 
-    pub async fn conect_client(&mut self, client: &Client, group: &ClientGroup) {
+    pub async fn conect_client(&mut self, client: &Client) {
         let _ = self
             .authorize_device(
                 &client.site,
@@ -318,7 +317,7 @@ impl UnifiController {
         let device = devices.iter().find(|c| c.mac == client.mac.clone());
 
         if let Some(d) = device {
-            let name = format!("{} ({})", client.full_name.clone(), group.name.clone());
+            let name = format!("({})", client.full_name.clone());
             let _ = self
                 .rename_device(d.record_id.clone().unwrap(), client.site.clone(), name)
                 .await;

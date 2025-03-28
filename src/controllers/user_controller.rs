@@ -4,13 +4,11 @@ use crate::{
     model::{
         entity::{
             admin::Admin,
-            approver::Approver,
             client::{Client, ClientStatus},
             user::{User, UserLogin, UserUpdate},
         },
         repository::{mongo_repository::MongoRepository, Repository},
     },
-    security::approval_code::validate_code,
     unifi::unifi::UnifiController,
     utils::{
         error::{BadRequest, Error, NotFound, Unauthorized},
@@ -42,16 +40,13 @@ pub async fn create_user(
     if user.username.len() < 3 && user.email.len() < 10 && user.password.len() < 6 {
         return Err(Error::new_bad_request("Invalid field(s)"));
     }
-    if let Some(_) = repo
+    if repo
         .find_one(doc! { "username": user.username.clone() })
-        .await
+        .await.is_some()
     {
         return Err(Error::new_bad_request("Username is already in use"));
     }
 
-    if let None = admin {
-        user.data.client_type = config.users.default_group.clone();
-    }
     user.password = hash(user.password, DEFAULT_COST).unwrap();
 
     let _ = repo.save(user).await;
@@ -65,7 +60,6 @@ pub async fn login_user(
     cookies: &CookieJar<'_>,
     mut unifi: UnifiController,
     user_repo: MongoRepository<User>,
-    approver_repo: MongoRepository<Approver>,
     client_repo: MongoRepository<Client>,
     config: &State<ConfigApp>,
 ) -> Result<Accepted<String>, BadRequest> {
@@ -95,47 +89,24 @@ pub async fn login_user(
             }
 
             let mut new_client = Client::new_with_data(&user.data);
-            let target_group = data.group.clone().unwrap_or(user.data.client_type.clone());
 
-            if user.data.client_type != target_group {
-                let group = config.clients.find_group(&target_group).unwrap();
-
-                if !group.public {
-                    let d = data.group.clone().unwrap();
-
-                    let ap = validate_code(
-                        data.approver_code.clone().unwrap_or("".to_string()),
-                        &d,
-                        &approver_repo,
-                    )
-                    .await;
-
-                    if let None = ap {
-                        return Err(Error::new_bad_request("Username or password invalid"));
-                    }
-
-                    new_client.approver = ap.unwrap();
-                }
-            }
-
-            let group = config.clients.find_group(&target_group).unwrap();
             let mac = cookies.get("id").unwrap().value().to_string();
             let site = cookies.get("site").unwrap().value().to_string();
-            let minutes: u16 = group.time_conneciton.clone() as u16;
+            let minutes: u16 = config.clients.time_connection as u16;
 
             new_client.site = site.clone();
             new_client.mac = mac.clone();
             new_client.time_connection = minutes.to_string();
             new_client.status = ClientStatus::Approved;
 
-            unifi.conect_client(&new_client, &group).await;
+            unifi.conect_client(&new_client).await;
             let _ = client_repo.save(new_client).await;
 
-            return Ok(Response::new_accepted(String::from("Connection Approved")));
+            Ok(Response::new_accepted(String::from("Connection Approved")))
         }
 
         None => {
-            return Err(Error::new_bad_request("Username or password invalid"));
+            Err(Error::new_bad_request("Username or password invalid"))
         }
     }
 }
