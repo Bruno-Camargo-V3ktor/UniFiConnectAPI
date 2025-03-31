@@ -5,7 +5,7 @@ use rocket::serde::{Deserialize, Serialize};
 use super::Entity;
 
 // Enums
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
 pub enum ClientStatus {
     Approved,
     Pending,
@@ -35,7 +35,7 @@ pub struct ClientInfo {
     pub connect: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Client {
     #[serde(rename = "_id", with = "serde_object_id")]
     pub id: String,

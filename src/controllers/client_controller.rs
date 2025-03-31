@@ -70,6 +70,7 @@ pub async fn client_connection_api(
 
                 let _ = unifi.conect_client(&c).await;
             } else {
+                let _ = unifi.reject_client(&c).await;
                 c.status = ClientStatus::Reject;
             }
 

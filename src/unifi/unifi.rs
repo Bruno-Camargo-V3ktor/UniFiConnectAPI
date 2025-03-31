@@ -35,6 +35,18 @@ pub struct DeviceUnauthorize {
     mac: Option<String>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct BlockDevice {
+    cmd: String,
+    mac: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct UnblockDevice {
+    cmd: String,
+    mac: String,
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DeviceInfo {
     /// ID interno do UniFi para este registro
@@ -122,6 +134,24 @@ impl DeviceUnauthorize {
         Self {
             cmd: String::from("unauthorize-guest"),
             mac: Some(mac),
+        }
+    }
+}
+
+impl BlockDevice {
+    pub fn new(mac: String) -> Self {
+        Self {
+            cmd: String::from("block-sta"),
+            mac,
+        }
+    }
+}
+
+impl UnblockDevice {
+    pub fn new(mac: String) -> Self {
+        Self {
+            cmd: String::from("unblock-sta"),
+            mac,
         }
     }
 }
@@ -246,7 +276,11 @@ impl UnifiController {
         Ok(())
     }
 
-    pub async fn get_guest_devices(&self, site: String) -> Result<Vec<DeviceInfo>, reqwest::Error> {
+    pub async fn get_guest_devices(&mut self, site: String) -> Result<Vec<DeviceInfo>, reqwest::Error> {
+        if !self.check_authentication() {
+            let _ = self.authentication_api().await?;
+        }
+
         let res = self
             .client
             .get(format!("{}/s/{}/stat/guest", self.base_url, site))
@@ -271,7 +305,11 @@ impl UnifiController {
         Ok(list)
     }
 
-    pub async fn get_all_devices(&self, site: String, is_guest: bool) -> Result<Vec<DeviceInfo>, reqwest::Error> {
+    pub async fn get_all_devices(&mut self, site: String, is_guest: bool) -> Result<Vec<DeviceInfo>, reqwest::Error> {
+        if !self.check_authentication() {
+            let _ = self.authentication_api().await?;
+        }
+
         let res = self
             .client
             .get(format!("{}/s/{}/stat/sta", self.base_url, site))
@@ -299,8 +337,43 @@ impl UnifiController {
 
         Ok(list)
     }
+    
+    pub async fn block_client(&mut self, client: &Client) {
+        if !self.check_authentication() {
+            let _ = self.authentication_api().await;
+        }
+
+        let block_device = BlockDevice::new(client.mac.clone());
+
+        let _ = self
+            .client
+            .post( format!("{}/s/{}/cmd/stamgr", self.base_url, client.site.clone()) )
+            .json(&block_device)
+            .send()
+            .await;
+    }
+    
+    pub async fn unblock_client(&mut self, client: &Client) {
+        if !self.check_authentication() {
+            let _ = self.authentication_api().await;
+        }
+
+        let unblock_device = UnblockDevice::new(client.mac.clone());
+
+        let _ = self
+            .client
+            .post( format!("{}/s/{}/cmd/stamgr", self.base_url, client.site.clone()) )
+            .json(&unblock_device)
+            .send()
+            .await;
+    }
+
 
     pub async fn conect_client(&mut self, client: &Client) {
+        if !self.check_authentication() {
+            let _ = self.authentication_api().await;
+        }
+
         let _ = self
             .authorize_device(
                 &client.site,
@@ -322,6 +395,21 @@ impl UnifiController {
                 .rename_device(d.record_id.clone().unwrap(), client.site.clone(), name)
                 .await;
         }
+    }
+
+    pub async fn reject_client(&mut self, client: &Client) {
+        if !self.check_authentication() {
+            let _ = self.authentication_api().await;
+        }
+
+        self.block_client(client).await;
+        
+        let client = client.clone();
+        let mut unifi = self.clone();
+        tokio::spawn( async move {
+            tokio::time::interval(tokio::time::Duration::from_secs(60)).tick().await;
+            unifi.unblock_client(&client).await;
+        } );
     }
 }
 
