@@ -6,7 +6,7 @@ use crate::model::repository::Repository;
 use crate::model::repository::mongo_repository::MongoRepository;
 use crate::security::approval_code::validate_code;
 use crate::unifi::unifi::UnifiController;
-use crate::utils::error::{BadRequest, CustomError, Error, Unauthorized};
+use crate::utils::error::{BadRequest, CustomError, Error, NotFound, Unauthorized};
 use crate::utils::responses::{CustomStatus, Ok, Response};
 use chrono::Local;
 use rocket::fs::NamedFile;
@@ -160,12 +160,28 @@ pub async fn update_client(
     Ok(Response::new_ok(()))
 }
 
+#[get("/client/<mac>/status")]
+pub async fn get_client_status(
+    client_repo: MongoRepository<Client>,
+    mac: String,
+) -> Result<Ok<ClientStatus>, NotFound> {
+    let clients = client_repo.find_all().await;
+    for c in clients.iter() {
+        if c.mac == mac {
+            return Ok( Response::new_ok(c.status.clone()) )
+        }
+    }
+
+    Err( Error::new_bad_request("Device not found") )
+}
+
 // Functions
 pub fn routes() -> Vec<Route> {
     routes![
         client_connection_api,
         client_connection_approver,
         get_clients,
-        update_client
+        update_client,
+        get_client_status,
     ]
 }
