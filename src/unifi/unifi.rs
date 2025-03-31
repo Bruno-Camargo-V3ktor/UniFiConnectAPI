@@ -36,13 +36,7 @@ pub struct DeviceUnauthorize {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BlockDevice {
-    cmd: String,
-    mac: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct UnblockDevice {
+pub struct DisconnectDevice {
     cmd: String,
     mac: String,
 }
@@ -138,19 +132,10 @@ impl DeviceUnauthorize {
     }
 }
 
-impl BlockDevice {
+impl DisconnectDevice {
     pub fn new(mac: String) -> Self {
         Self {
-            cmd: String::from("block-sta"),
-            mac,
-        }
-    }
-}
-
-impl UnblockDevice {
-    pub fn new(mac: String) -> Self {
-        Self {
-            cmd: String::from("unblock-sta"),
+            cmd: String::from("kick-sta"),
             mac,
         }
     }
@@ -338,32 +323,17 @@ impl UnifiController {
         Ok(list)
     }
     
-    pub async fn block_client(&mut self, client: &Client) {
+    pub async fn disconnect_client(&mut self, client: &Client) {
         if !self.check_authentication() {
             let _ = self.authentication_api().await;
         }
 
-        let block_device = BlockDevice::new(client.mac.clone());
+        let disconnect_device = DisconnectDevice::new(client.mac.clone());
 
         let _ = self
             .client
             .post( format!("{}/s/{}/cmd/stamgr", self.base_url, client.site.clone()) )
-            .json(&block_device)
-            .send()
-            .await;
-    }
-    
-    pub async fn unblock_client(&mut self, client: &Client) {
-        if !self.check_authentication() {
-            let _ = self.authentication_api().await;
-        }
-
-        let unblock_device = UnblockDevice::new(client.mac.clone());
-
-        let _ = self
-            .client
-            .post( format!("{}/s/{}/cmd/stamgr", self.base_url, client.site.clone()) )
-            .json(&unblock_device)
+            .json(&disconnect_device)
             .send()
             .await;
     }
@@ -402,9 +372,7 @@ impl UnifiController {
             let _ = self.authentication_api().await;
         }
 
-        self.block_client(client).await;
-        tokio::time::interval(tokio::time::Duration::from_secs(50)).tick().await;
-        self.unblock_client(client).await;
+        self.disconnect_client(client).await;
     }
 }
 
