@@ -403,13 +403,8 @@ impl UnifiController {
         }
 
         self.block_client(client).await;
-        
-        let client = client.clone();
-        let mut unifi = self.clone();
-        tokio::spawn( async move {
-            tokio::time::interval(tokio::time::Duration::from_secs(60)).tick().await;
-            unifi.unblock_client(&client).await;
-        } );
+        tokio::time::interval(tokio::time::Duration::from_secs(50)).tick().await;
+        self.unblock_client(client).await;
     }
 }
 
