@@ -166,13 +166,22 @@ pub async fn get_client_status(
     mac: String,
 ) -> Result<Ok<ClientStatus>, NotFound> {
     let clients = client_repo.find_all().await;
+    let mut client: Option<Client> = None;
+
     for c in clients.iter() {
-        if c.mac == mac {
-            return Ok( Response::new_ok(c.status.clone()) )
+        if c.mac == mac { 
+            if let Some(cl) = &client {
+                if c.start_time >= cl.start_time { client = Some(c.clone()); }
+            } else {
+                client = Some(c.clone());
+            }
         }
     }
-
-    Err( Error::new_bad_request("Device not found") )
+    
+    match client {
+        Some(c) => Ok( Response::new_ok(c.status) ),
+        None => Err( Error::new_not_found("Device not found") )
+    }
 }
 
 // Functions
