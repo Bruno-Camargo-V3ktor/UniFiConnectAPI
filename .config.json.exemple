@@ -23,7 +23,8 @@
     },
 
     "clients": {
-      "time_connection": 180
+      "time_connection": 180,
+      "expiration_time": 24
     },
 
     "approvers": {

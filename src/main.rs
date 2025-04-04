@@ -114,8 +114,7 @@ async fn monitoring_ldap(config: ConfigApplication) {
                 loop {
                     monitoring.scan_admins(&mut conn, &connection).await;
                     monitoring.scan_approvers(&mut conn, &connection, &config.approvers).await;
-                    monitoring.scan_users(&mut conn, &connection, &config.users).await;
-        
+                    monitoring.scan_users(&mut conn, &connection, &config.users).await; 
                     interval.tick().await;
                 }
             }
@@ -135,7 +134,7 @@ async fn monitoring_clients(unifi: UnifiController, config: ConfigApplication) {
         .unwrap();
 
     let db = client.default_database().unwrap();
-    let mut monitoring = ClientsMonitoring::new(db, unifi);
+    let mut monitoring = ClientsMonitoring::new(db, unifi, config.clients.clone());
 
     let mut interval = time::interval(Duration::from_secs(60));
     loop {

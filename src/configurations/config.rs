@@ -36,6 +36,7 @@ pub struct UnifiConfig {
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ClientsConfig {
     pub time_connection: usize,
+    pub expiration_time: Option<usize>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

@@ -1,5 +1,5 @@
 use crate::{
-    configurations::config::{ApproversConfig, LdapConfig, UsersConfig}, ldap::ldap::LdapConnection, model::{
+    configurations::config::{ApproversConfig, ClientsConfig, LdapConfig, UsersConfig}, ldap::ldap::LdapConnection, model::{
         entity::{admin::Admin, approver::Approver, client::{Client, ClientStatus}, user::User},
         repository::{mongo_repository::MongoRepository, Repository},
     }, unifi::unifi::{DeviceInfo, UnifiController}
@@ -13,6 +13,7 @@ use super::generator;
 
 // Struct
 pub struct ClientsMonitoring {
+    config: ClientsConfig,
     repo: MongoRepository<Client>,
     unifi: UnifiController,
 }
@@ -27,8 +28,9 @@ pub struct LdapMonitoring {
 // Impls
 #[allow(unused)]
 impl ClientsMonitoring {
-    pub fn new(database: Database, unifi: UnifiController) -> Self {
+    pub fn new(database: Database, unifi: UnifiController, config: ClientsConfig) -> Self {
         Self {
+            config,
             repo: MongoRepository::new(database),
             unifi,
         }
@@ -51,12 +53,39 @@ impl ClientsMonitoring {
             }
             let devices = res.unwrap();
 
+            if let Some(max_time) = &self.config.expiration_time {
+                self.delete_client_registration_expired(&mut clients, *max_time).await;
+            }
+        
             self.check_and_update_client_fields(&mut clients, &devices);
 
             for i in 0..clients.len() {
                 let r = self.repo.update(clients.remove(0)).await;
             }
         }
+    }
+    
+    pub async fn delete_client_registration_expired(
+        &mut self,
+        clients: &mut Vec<Client>,
+        max_time: usize
+    ) {
+        
+        let ids = clients.iter().filter( |c| {
+            let duration = Local::now() - c.start_time.clone();
+            (duration.num_hours().abs() as usize) >= max_time 
+        } )
+        .enumerate()
+        .map( |(id, c)| (id, c.id.clone()) )
+        .collect::<Vec<(usize, String)>>()
+        .into_iter()
+        .rev();
+        
+        for ( pos, id ) in ids {
+            self.repo.delete_by_id(id.clone()).await;
+            let _ = clients.remove(pos);
+        }
+
     }
 
     pub fn check_and_update_client_fields(
