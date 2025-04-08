@@ -106,7 +106,7 @@ pub async fn client_connection_approver(
     let config = config.read().await;
     let client = data.into_inner();
 
-    if !client.validate_form() {
+    if !client.validate_form(config.clients.clone()) {
         return Err(Error::new_bad_request("Invalid Form Field(s)"));
     }
 

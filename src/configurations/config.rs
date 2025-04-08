@@ -37,6 +37,15 @@ pub struct UnifiConfig {
 pub struct ClientsConfig {
     pub time_connection: usize,
     pub expiration_time: Option<usize>,
+    pub info: Option<ClientInfo>
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct ClientInfo {
+    pub name_validated: Option<String>,
+    pub email_validated: Option<String>,
+    pub phone_validated: Option<String>,
+    pub fields: Vec< (String, String) >,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

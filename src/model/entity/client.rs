@@ -1,4 +1,6 @@
-use crate::{db::mongo_db::serde_object_id, utils::validator::Validator};
+use std::collections::HashMap;
+
+use crate::{configurations::config::ClientsConfig, db::mongo_db::serde_object_id, utils::validator::Validator};
 use chrono::{DateTime, Local};
 use rocket::serde::{Deserialize, Serialize};
 
@@ -17,12 +19,10 @@ pub enum ClientStatus {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ClientData {
     pub full_name: String,
-    pub companion: String,
     pub email: String,
     pub phone: String,
-    pub cpf: Option<String>,
     pub approver_code: Option<String>,
-    pub menssage: Option<String>,
+    pub fields: HashMap<String, String>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -41,10 +41,9 @@ pub struct Client {
     pub id: String,
 
     pub full_name: String,
-    pub companion: String,
     pub email: String,
     pub phone: String,
-    pub cpf: Option<String>,
+    pub fields: HashMap<String, String>,
 
     pub mac: String,
     pub site: String,
@@ -66,12 +65,13 @@ impl Client {
         Self {
             id: String::new(),
             full_name: String::from("---"),
-            companion: String::from("---"),
             email: String::from("---"),
             phone: String::from("---"),
-            cpf: Some(String::from("---")),
+            fields: HashMap::new(),
+
             mac: String::from("---"),
             site: String::from("---"),
+            
             status: ClientStatus::Pending,
             hostname: None,
             tx_bytes: None,
@@ -86,13 +86,14 @@ impl Client {
         Self {
             id: String::new(),
             full_name: data.full_name.clone(),
-            companion: data.companion.clone(),
             email: data.email.clone(),
             phone: data.phone.clone(),
-            cpf: data.cpf.clone(),
+            fields: data.fields.clone(),
+
             mac: String::from("---"),
             site: String::from("---"),
             status: ClientStatus::Pending,
+
             hostname: None,
             tx_bytes: None,
             rx_bytes: None,
@@ -106,12 +107,13 @@ impl Client {
         let mut client = Self {
             id: String::new(),
             full_name: String::from("---"),
-            companion: String::from("---"),
             email: String::from("---"),
             phone: String::from("---"),
-            cpf: Some(String::from("---")),
+            fields: HashMap::new(),
+
             mac: info.mac.clone(),
             site: info.site.clone(),
+            
             status: if info.connect {
                 ClientStatus::Approved
             } else {
@@ -129,8 +131,7 @@ impl Client {
             client.full_name = data.full_name;
             client.email = data.email;
             client.phone = data.phone;
-            client.cpf = data.cpf;
-            client.companion = data.companion;
+            client.fields = data.fields;
         }
 
         client
@@ -139,10 +140,8 @@ impl Client {
 }
 
 impl ClientData {
-    pub fn validate_form(&self) -> bool {
-        Validator::validate_phone(&self.phone)
-            && Validator::validate_email(&self.email)
-            && Validator::validate_cpf(&self.cpf)
+    pub fn validate_form(&self, config: ClientsConfig) -> bool {
+        Validator::validate_client(&config, &self)
     }
 }
 

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{Entity, client::ClientData};
 use crate::{db::mongo_db::serde_object_id, ldap::ldap::LdapUser};
 use serde::{Deserialize, Serialize};
@@ -45,11 +47,9 @@ impl User {
     pub fn new_with_ldap_user(ldap_user: &LdapUser) -> Self {
         let data = ClientData {
             full_name: ldap_user.name.clone(),
-            companion: String::new(),
             email: ldap_user.email.clone(),
             phone: String::new(),
-            cpf: None,
-            menssage: None,
+            fields: HashMap::new(),
             approver_code: None
         };
 
