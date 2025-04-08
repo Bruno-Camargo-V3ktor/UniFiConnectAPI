@@ -60,7 +60,8 @@ impl Entity<String> for Approver {
 
 impl Approver {
     pub fn create_validity(&mut self, days: i64) {
-        if days <= 0 {
+        if days == 0 {
+            self.validity = None;
             return;
         }
 

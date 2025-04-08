@@ -124,17 +124,14 @@ impl ConfigApplication {
 
         let database_url = self.database.get_formated_url();
 
-        let figment = Figment::from(config).merge(("databases.mongodb", rocket_db_pools::Config {
+        Figment::from(config).merge(("databases.mongodb", rocket_db_pools::Config {
             url: database_url,
             min_connections: Some(64),
             max_connections: 1024,
             connect_timeout: 5,
             idle_timeout: Some(120),
             extensions: None,
-            ..rocket_db_pools::Config::default()
-        }));
-
-        figment
+        }))
     }
 }
 

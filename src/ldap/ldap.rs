@@ -21,15 +21,13 @@ pub struct LdapUser {
 // Impls
 impl LdapConnection {
     pub fn new(config: LdapConfig) -> Self {
-        let ldap = Self {
+        Self {
             username: config.user_service.clone(),
             password: config.password.clone(),
             domain: config.domain.clone(),
             server: config.server.clone(),
             base_dn: config.base_dn.clone()
-        };
-
-        ldap
+        }
     }
 
     pub async fn simple_authentication(&self, username: &str, password: &str) -> bool {
@@ -51,13 +49,13 @@ impl LdapConnection {
                         return false;
                     }
 
-                    Err(_) => {return false;}
+                    Err(_) => {false}
                 }
 
             }  
 
             Err(_) => {
-                return false
+                false
             }
         }
 
@@ -101,11 +99,11 @@ impl LdapConnection {
     
         let (entries, _res) = ldap.search(user_dn, Scope::Base, &filter, vec!["cn", "mail", "sAMAccountName"]).await?.success()?;
     
-        if let Some(entry) = entries.get(0) {
+        if let Some(entry) = entries.first() {
             let search_entry = SearchEntry::construct(entry.clone());
-            let username = search_entry.attrs.get("sAMAccountName").and_then(|v| v.get(0)).cloned().unwrap_or_else(|| "---".to_string());
-            let name = search_entry.attrs.get("cn").and_then(|v| v.get(0)).cloned().unwrap_or_else(|| "Desconhecido".to_string());
-            let email = search_entry.attrs.get("mail").and_then(|v| v.get(0)).cloned().unwrap_or_else(|| "".to_string());
+            let username = search_entry.attrs.get("sAMAccountName").and_then(|v| v.first()).cloned().unwrap_or_else(|| "---".to_string());
+            let name = search_entry.attrs.get("cn").and_then(|v| v.first()).cloned().unwrap_or_else(|| "Desconhecido".to_string());
+            let email = search_entry.attrs.get("mail").and_then(|v| v.first()).cloned().unwrap_or_else(|| "".to_string());
     
             return Ok(Some(LdapUser { username, name, email }));
         }
