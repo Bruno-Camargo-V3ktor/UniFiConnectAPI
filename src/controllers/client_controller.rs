@@ -102,7 +102,7 @@ pub async fn client_connection_approver(
     approver_repository: MongoRepository<Approver>,
     data: Json<ClientData>,
     config: &State<ConfigApp>,
-) -> Result<CustomStatus, BadRequest> {
+) -> Result<Ok<()>, BadRequest> {
     let config = config.read().await;
     let client = data.into_inner();
 
@@ -132,12 +132,12 @@ pub async fn client_connection_approver(
         unifi.conect_client(&new_client).await;
         let _ = repository.save(new_client).await;
 
-        return Ok(Response::new_custom_status(202));
+        return Ok(Response::new_ok(()));
     }
 
     // Approval pending
     let _ = repository.save(new_client).await;
-    Ok(Response::new_custom_status(200))
+    Ok(Response::new_ok(()))
 }
 
 #[get("/client", format = "application/json")]
