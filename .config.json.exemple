@@ -30,7 +30,8 @@
     "approvers": {
         "code_size": 8,
         "just_numbers": false,
-        "validity_days_code": 1
+        "validity_days_code": 1,
+        "encrypted_code": true
     },
 
     "admins": {
@@ -48,7 +49,15 @@
         "password": "",
         "approvers_search": [],
         "users_search": [],
-        "admins_search": []
+        "admins_search": [],
+
+        "attrs": {
+          name: "cn",
+          username: "sAMAccountName",
+          email: "mail",
+          member: "member", 
+          group: "cn",
+        }
     }
 
 }

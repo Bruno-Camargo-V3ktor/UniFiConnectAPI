@@ -4,6 +4,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use tokio::sync::RwLock;
 
+use crate::ldap::ldap::LdapAttributes;
+
 // Types
 pub type ConfigApp = RwLock<ConfigApplication>;
 
@@ -72,6 +74,7 @@ pub struct LdapConfig {
     pub domain: String,
     pub base_dn: String,
     pub user_service: String,
+    pub attrs: LdapAttributes,
     pub password: String,
     pub approvers_search: Vec<String>,
     pub users_search: Vec<String>,

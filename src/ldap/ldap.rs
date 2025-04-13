@@ -1,6 +1,7 @@
 
 use crate::configurations::config::LdapConfig;
 use ldap3::{result::Result, Ldap, LdapConnAsync, Scope, SearchEntry};
+use serde::{Deserialize, Serialize};
 
 // Structs
 pub struct LdapConnection {
@@ -9,6 +10,16 @@ pub struct LdapConnection {
     pub domain: String,
     pub server: String,
     pub base_dn: String,
+    pub attributes: LdapAttributes
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct LdapAttributes {
+    pub name: String,
+    pub username: String,
+    pub email: String,
+    pub member: String, 
+    pub group: String,
 }
 
 #[derive(Debug)]
@@ -26,7 +37,8 @@ impl LdapConnection {
             password: config.password.clone(),
             domain: config.domain.clone(),
             server: config.server.clone(),
-            base_dn: config.base_dn.clone()
+            base_dn: config.base_dn.clone(),
+            attributes: config.attrs.clone()
         }
     }
 
@@ -71,10 +83,10 @@ impl LdapConnection {
 
     pub async fn get_users_in_group(&self, conn: &mut Ldap, group_name: &str) -> Result<Vec<LdapUser>> {
         let mut users = vec![];
-        let filter = format!("(cn={})", group_name);
+        let filter = format!("({}={})", self.attributes.group.clone(), group_name);
         
         
-        let (entries, _res) = conn.search(&self.base_dn, Scope::Subtree, &filter, vec!["member"]).await?.success()?;
+        let (entries, _res) = conn.search(&self.base_dn, Scope::Subtree, &filter, vec![self.attributes.member.clone()]).await?.success()?;
 
         if entries.is_empty() {
             return Ok(users);
@@ -82,7 +94,7 @@ impl LdapConnection {
 
         for entry in entries {
             let search_entry = SearchEntry::construct(entry);
-            if let Some(members) = search_entry.attrs.get("member") {
+            if let Some(members) = search_entry.attrs.get( &self.attributes.member ) {
                 for member_dn in members {
                     if let Some(user) = self.get_user_details(conn, member_dn).await? {
                         users.push(user);
@@ -95,15 +107,18 @@ impl LdapConnection {
     }
 
     pub async fn get_user_details(&self, ldap: &mut Ldap, user_dn: &str) -> Result<Option<LdapUser>> {
-        let filter = format!("(distinguishedName={})", user_dn);
-    
-        let (entries, _res) = ldap.search(user_dn, Scope::Base, &filter, vec!["cn", "mail", "sAMAccountName"]).await?.success()?;
+        let (entries, _res) = ldap.search(
+            user_dn, 
+            Scope::Base, 
+            "objectClass=*", 
+            vec![self.attributes.name.clone(), self.attributes.email.clone(), self.attributes.username.clone()])
+            .await?.success()?;
     
         if let Some(entry) = entries.first() {
             let search_entry = SearchEntry::construct(entry.clone());
-            let username = search_entry.attrs.get("sAMAccountName").and_then(|v| v.first()).cloned().unwrap_or_else(|| "---".to_string());
-            let name = search_entry.attrs.get("cn").and_then(|v| v.first()).cloned().unwrap_or_else(|| "Desconhecido".to_string());
-            let email = search_entry.attrs.get("mail").and_then(|v| v.first()).cloned().unwrap_or_else(|| "".to_string());
+            let username = search_entry.attrs.get( &self.attributes.username ).and_then(|v| v.first()).cloned().unwrap_or_else(|| "---".to_string());
+            let name = search_entry.attrs.get( &self.attributes.name ).and_then(|v| v.first()).cloned().unwrap_or_else(|| "Desconhecido".to_string());
+            let email = search_entry.attrs.get( &self.attributes.email ).and_then(|v| v.first()).cloned().unwrap_or_else(|| "".to_string());
     
             return Ok(Some(LdapUser { username, name, email }));
         }
