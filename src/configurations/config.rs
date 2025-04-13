@@ -53,6 +53,7 @@ pub struct ApproversConfig {
     pub code_size: usize,
     pub validity_days_code: usize,
     pub just_numbers: bool,
+    pub encrypted_code: bool, 
 }
 
 #[derive(Serialize, Deserialize, Clone)]

@@ -52,11 +52,8 @@ impl<E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> Re
     async fn find_one(&self, query: Self::Options) -> Option<Self::Entity> {
         let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
         let res = collection.find_one(query, None).await;
-
-        match res {
-            Ok(op) => op,
-            Err(_) => None,
-        }
+        
+        res.unwrap_or_default()
     }
 
     async fn find_by_id(&self, id: Self::Id) -> Option<Self::Entity> {
@@ -67,7 +64,7 @@ impl<E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> Re
         };
 
         let res = collection.find_one(doc, None).await;
-        if let Ok(e) = res { e } else { None }
+        res.unwrap_or_default()
     }
 
     async fn find_all(&self) -> Vec<Self::Entity> {
@@ -97,7 +94,11 @@ impl<E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> Re
 
         let res = collection.insert_one(&entity, None).await;
 
-        if let Ok(_) = res { Some(entity) } else { None }
+        if res.is_ok() {
+            return Some(entity)
+        }
+
+        None
     }
 
     async fn save_all(&self, mut entitys: Vec<Self::Entity>) -> Vec<Self::Entity> {
@@ -117,7 +118,7 @@ impl<E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> Re
 
         let res = collection
             .update_one(
-                doc! { "_id" : ObjectId::parse_str( &entity.get_id() ).unwrap() },
+                doc! { "_id" : ObjectId::parse_str( entity.get_id() ).unwrap() },
                 doc! { "$set": to_document(&entity).unwrap() },
                 None,
             )
@@ -146,15 +147,12 @@ impl<E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> Re
         let collection = self.database.collection::<Self::Entity>(&Self::Entity::get_name());
         let res = collection
             .delete_one(
-                doc! { "_id" : ObjectId::parse_str(&entity.get_id()).unwrap() },
+                doc! { "_id" : ObjectId::parse_str( entity.get_id() ).unwrap() },
                 None,
             )
             .await;
-
-        match res {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        
+        res.is_ok()
     }
 
     async fn delete_by_id(&self, id: Self::Id) -> bool {
@@ -163,10 +161,8 @@ impl<E: Entity<String> + Serialize  + DeserializeOwned + Unpin + Send + Sync> Re
             .delete_one(doc! { "_id" : ObjectId::parse_str(&id).unwrap() }, None)
             .await;
 
-        match res {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+
+        res.is_ok()
     }
 
     async fn delete_all(&self, query: Self::Options) -> usize {

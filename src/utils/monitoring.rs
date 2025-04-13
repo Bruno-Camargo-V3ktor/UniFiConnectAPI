@@ -72,8 +72,8 @@ impl ClientsMonitoring {
     ) {
         
         let ids = clients.iter().filter( |c| {
-            let duration = Local::now() - c.start_time.clone();
-            (duration.num_hours().abs() as usize) >= max_time 
+            let duration = Local::now() - c.start_time;
+            duration.num_hours().abs() >= max_time as i64 
         } )
         .enumerate()
         .map( |(id, c)| (id, c.id.clone()) )
@@ -91,7 +91,7 @@ impl ClientsMonitoring {
     pub fn check_and_update_client_fields(
         &self,
         clients: &mut Vec<Client>,
-        devices: &Vec<DeviceInfo>,
+        devices: &[DeviceInfo],
     ) {
         for c in clients {
             if c.status != ClientStatus::Approved {
@@ -100,12 +100,12 @@ impl ClientsMonitoring {
 
             let d = devices
                 .iter()
-                .find(|d| if c.mac == d.mac { true } else { false });
+                .find(|d| c.mac == d.mac);
 
             if let Some(device) = d {
                 if device.expired.unwrap_or(true) {
                     c.status = ClientStatus::Expired;
-                    &self.repo.update_all(
+                    self.repo.update_all(
                         doc!{
                             "_id": ObjectId::parse_str(&c.id).unwrap()
                         },
@@ -120,11 +120,11 @@ impl ClientsMonitoring {
                 }
 
                 if device.rx_bytes.is_some() {
-                    c.rx_bytes = device.rx_bytes.clone();
+                    c.rx_bytes = device.rx_bytes;
                 }
 
                 if device.tx_bytes.is_some() {
-                    c.tx_bytes = device.tx_bytes.clone();
+                    c.tx_bytes = device.tx_bytes;
                 }
             }
         }
@@ -160,7 +160,7 @@ impl LdapMonitoring {
                     approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
                     
                     
-                    approver.create_validity(config.validity_days_code.clone() as i64);
+                    approver.create_validity(config.validity_days_code as i64);
 
                     let _ = self.approvers_repo.save(approver).await;
                 }

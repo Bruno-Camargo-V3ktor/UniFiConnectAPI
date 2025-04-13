@@ -29,12 +29,12 @@ pub async fn create_approver(
     let res = repository
         .find_one(doc! { "username": approver.username.clone() })
         .await;
-    match res {
-        Some(_) => return Err(Error::new_bad_request("Username already registered")),
-        None => {}
+
+    if res.is_some(){
+        return Err(Error::new_bad_request("Username already registered"));
     }
 
-    approver.secrete_code = hash(approver.secrete_code.as_str(), DEFAULT_COST).unwrap();
+    approver.secrete_code = if config.approvers.encrypted_code { hash(approver.secrete_code.as_str(), DEFAULT_COST).unwrap() } else { approver.secrete_code };
     approver.password = hash(approver.password.as_str(), DEFAULT_COST).unwrap();
 
     let mut approver = Approver {
@@ -45,7 +45,7 @@ pub async fn create_approver(
         validity: None,
         secrete_code: approver.secrete_code,
     };
-    approver.create_validity(config.approvers.validity_days_code.clone() as i64);
+    approver.create_validity(config.approvers.validity_days_code as i64);
 
     let _ = repository.save(approver).await;
 
@@ -96,8 +96,8 @@ pub async fn update_approver(
     approver.secrete_code = approver_data
         .secrete_code
         .map(|c| {
-            let new_code = hash(c, DEFAULT_COST).unwrap();
-            approver.create_validity(config.approvers.validity_days_code.clone() as i64);
+            let new_code = if config.approvers.encrypted_code { hash(c, DEFAULT_COST).unwrap() } else { c };
+            approver.create_validity(config.approvers.validity_days_code as i64);
             new_code
         })
         .unwrap_or(approver.secrete_code);
@@ -114,8 +114,8 @@ pub async fn generator_approver_code(
     config: &State<ConfigApp>,
 ) -> Result<Ok<ApproverCode>, BadRequest> {
     let config = config.read().await;
-    let code_size = config.approvers.code_size.clone();
-    let just_numbers = config.approvers.just_numbers.clone();
+    let code_size = config.approvers.code_size;
+    let just_numbers = config.approvers.just_numbers;
 
     let op_approver = repository
         .find_one(doc! {
@@ -144,13 +144,13 @@ pub async fn generator_approver_code(
             
 
             let new_code = generator::generator_code(code_size, just_numbers);
-            approver.secrete_code = hash(new_code.clone(), DEFAULT_COST).unwrap();
-            approver.create_validity(config.approvers.validity_days_code.clone() as i64);
+            approver.secrete_code = if config.approvers.encrypted_code { hash(new_code.clone(), DEFAULT_COST).unwrap() } else { new_code.clone() };
+            approver.create_validity(config.approvers.validity_days_code as i64);
 
             let _ = repository.update(approver).await;
             Ok(Response::new_ok(ApproverCode::new(
                 new_code,
-                config.approvers.validity_days_code.clone(),
+                config.approvers.validity_days_code,
             )))
         }
 

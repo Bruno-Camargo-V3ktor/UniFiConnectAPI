@@ -37,51 +37,45 @@ pub async fn admin_login(
            "username" : &data.username
         })
         .await;
+    
+    if let Some(admin) = res {
+        match admin.password {
+            Some(p) => {
+                let check = verify(&data.password, &p);
+                if let Ok(b) = check {
+                    if b {
+                        let token = AdminToken {
+                            token: create_token(
+                                &admin.id,
+                                config.server.secret_key.clone(),
+                                config.admins.token_expirantion as u64,
+                            )
+                        };
 
-    match res {
-        Some(admin) => {
-
-            match admin.password {
-                Some(p) => {
-                    let check = verify(&data.password, &p);
-                    if let Ok(b) = check {
-                        if b {
-                            let token = AdminToken {
-                                token: create_token(
-                                    &admin.id,
-                                    config.server.secret_key.clone(),
-                                    config.admins.token_expirantion.clone() as u64,
-                                )
-                            };
-
-                            return Ok(Response::new_accepted(token));
-                         }
-                    }
-                }
-
-                None => {
-                    if let Some(v) = config.ldap.clone() {
-                        let ldap = LdapConnection::new(v);
-                        let auth = ldap.simple_authentication(&data.username, &data.password).await;
-
-                        if auth {
-                             let token = AdminToken {
-                                token: create_token(
-                                    &admin.id,
-                                    config.server.secret_key.clone(),
-                                    config.admins.token_expirantion.clone() as u64,
-                                )
-                            };
-
-                            return Ok(Response::new_accepted(token));
-                        }
+                        return Ok(Response::new_accepted(token));
                     }
                 }
             }
 
-        }
+            None => {
+                if let Some(v) = config.ldap.clone() {
+                    let ldap = LdapConnection::new(v);
+                    let auth = ldap.simple_authentication(&data.username, &data.password).await;
 
-        None => {}
+                    if auth {
+                        let token = AdminToken {
+                            token: create_token(
+                                &admin.id,
+                                config.server.secret_key.clone(),
+                                config.admins.token_expirantion as u64,
+                            )
+                        };
+
+                        return Ok(Response::new_accepted(token));
+                    }
+                }
+            }
+        }
     }
 
     Err(Error::new_bad_request("Invalid Username or Password"))

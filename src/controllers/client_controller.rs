@@ -121,7 +121,7 @@ pub async fn client_connection_approver(
 
     // Approval by code
     if let Some(code) = client.approver_code {
-        let approver = validate_code(code, &approver_repository).await;
+        let approver = validate_code(code, &approver_repository, config.approvers.encrypted_code).await;
         if approver.is_none() {
             return Err(Error::new_bad_request("Invalid Fields"));
         }

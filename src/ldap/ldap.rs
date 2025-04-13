@@ -41,12 +41,12 @@ impl LdapConnection {
             Ok((conn, mut ldap)) => {
                 ldap3::drive!(conn);
 
-                match ldap.simple_bind(&user_dn, &password).await {
+                match ldap.simple_bind(&user_dn, password).await {
                     Ok(res) => {
                         if res.success().is_ok() {
                             return true;
                         }
-                        return false;
+                        false
                     }
 
                     Err(_) => {false}

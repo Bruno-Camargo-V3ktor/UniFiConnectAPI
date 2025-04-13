@@ -204,7 +204,7 @@ impl UnifiController {
         minutes: &u16,
     ) -> Result<(), reqwest::Error> {
         if !self.check_authentication() {
-            let _ = self.authentication_api().await?;
+            self.authentication_api().await?;
         }
 
         let body = DeviceAuthorization::new(mac.to_string(), *minutes);
@@ -225,7 +225,7 @@ impl UnifiController {
         mac: &String,
     ) -> Result<(), reqwest::Error> {
         if !self.check_authentication() {
-            let _ = self.authentication_api().await?;
+            self.authentication_api().await?;
         }
 
         let body = DeviceUnauthorize::new(mac.to_string());
@@ -247,7 +247,7 @@ impl UnifiController {
         name: String,
     ) -> Result<(), reqwest::Error> {
         if !self.check_authentication() {
-            let _ = self.authentication_api().await?;
+            self.authentication_api().await?;
         }
 
         let body = HashMap::from([("name", name.as_str())]);
@@ -263,7 +263,7 @@ impl UnifiController {
 
     pub async fn get_guest_devices(&mut self, site: String) -> Result<Vec<DeviceInfo>, reqwest::Error> {
         if !self.check_authentication() {
-            let _ = self.authentication_api().await?;
+            self.authentication_api().await?;
         }
 
         let res = self
@@ -274,17 +274,11 @@ impl UnifiController {
 
         let res = res.json::<ApiResponse>().await?;
         let mut list: Vec<DeviceInfo> = vec![];
+        
 
-        match res.data {
-            Value::Array(array) => {
-                let clients: Result<Vec<DeviceInfo>, _> =
-                    serde_json::from_value(Value::Array(array));
-
-                if let Ok(cs) = clients {
-                    list = cs
-                }
-            }
-            _ => {}
+        if let Value::Array(array) = res.data {
+            let clients: Result<Vec<DeviceInfo>, _> = serde_json::from_value(Value::Array(array));
+            if let Ok(cs) = clients { list = cs; }
         }
 
         Ok(list)
@@ -292,7 +286,7 @@ impl UnifiController {
 
     pub async fn get_all_devices(&mut self, site: String, is_guest: bool) -> Result<Vec<DeviceInfo>, reqwest::Error> {
         if !self.check_authentication() {
-            let _ = self.authentication_api().await?;
+            self.authentication_api().await?;
         }
 
         let res = self
@@ -304,20 +298,16 @@ impl UnifiController {
         let res = res.json::<ApiResponse>().await?;
         let mut list: Vec<DeviceInfo> = vec![];
 
-        match res.data {
-            Value::Array(array) => {
-                let clients: Result<Vec<DeviceInfo>, _> =
-                    serde_json::from_value(Value::Array(array));
+        if let Value::Array(array) = res.data {
+            let clients: Result<Vec<DeviceInfo>, _> = serde_json::from_value(Value::Array(array));
 
-                if let Ok(cs) = clients {
-                    let mut cs = cs;
-                    if is_guest {
-                        cs = cs.into_iter().filter(|d| d.is_guest.unwrap_or(false)).collect();
-                    }
-                    list = cs
+            if let Ok(cs) = clients {
+                let mut cs = cs;
+                if is_guest {
+                    cs.retain( |d| d.is_guest.unwrap_or(false) );
                 }
+                list = cs
             }
-            _ => {}
         }
 
         Ok(list)
@@ -325,7 +315,7 @@ impl UnifiController {
     
     pub async fn disconnect_client(&mut self, client: &Client) {
         if !self.check_authentication() {
-            let _ = self.authentication_api().await;
+           let _ = self.authentication_api().await;
         }
 
         let disconnect_device = DisconnectDevice::new(client.mac.clone());

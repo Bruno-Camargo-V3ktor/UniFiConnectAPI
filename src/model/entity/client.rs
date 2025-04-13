@@ -141,7 +141,7 @@ impl Client {
 
 impl ClientData {
     pub fn validate_form(&self, config: ClientsConfig) -> bool {
-        Validator::validate_client(&config, &self)
+        Validator::validate_client(&config, self)  
     }
 }
 
