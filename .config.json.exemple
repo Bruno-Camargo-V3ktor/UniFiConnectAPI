@@ -56,8 +56,24 @@
           username: "sAMAccountName",
           email: "mail",
           member: "member", 
-          group: "cn",
+          group: "cn"
         }
+    },
+
+    "glpi": {
+      "url": "",
+      "app_token": "",
+      "authorization": "Basic ...",
+      "title_ticket"": "Waiting for Wi-Fi Approval",
+      "body_titcket": "{name} from email:{email} with phone: {phone}.\nHe is asking for access to Wi-Fi",
+      "approver_message": "Approved",
+      "reject_message": "Rejected",
+      "open_status_ticket": 1,
+      "close_status_ticket": 6,
+      "user_request_id": 261,
+      "ticket_category_id": 0,
+      "ticket_priority_id": 4,
+      "template_solution_id": 0
     }
 
 }

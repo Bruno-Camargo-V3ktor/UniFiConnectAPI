@@ -1,5 +1,5 @@
 [package]
-name = "external_portal_server"
+name = "unifi_connect"
 version = "0.1.0"
 edition = "2024"
 
@@ -19,6 +19,6 @@ regex = "1"
 bson = "2.13.0"
 
 jsonwebtoken = "9"
-bcrypt = "0.16"
+bcrypt = "0.17"
 rand = "0.9"
 ldap3 = "0.11"

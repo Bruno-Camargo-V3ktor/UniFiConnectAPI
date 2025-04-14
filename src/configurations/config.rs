@@ -82,6 +82,23 @@ pub struct LdapConfig {
 }
 
 #[derive(Serialize, Deserialize, Clone)]
+pub struct GLPIConfig {
+    pub url: String,
+    pub app_token: String,
+    pub authorization: String,
+    pub title_ticket: String,
+    pub body_titcket: String,
+    pub approver_message: String,
+    pub reject_message: String,
+    pub open_status_ticket: usize,
+    pub close_status_ticket: usize,
+    pub user_request_id: usize,
+    pub ticket_category_id: usize,
+    pub ticket_priority_id: usize,
+    pub template_solution_id: usize
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct ConfigApplication {
     pub server: ServerConfig,
     pub unifi: UnifiConfig,
@@ -91,6 +108,7 @@ pub struct ConfigApplication {
     pub admins: AdminsConfig,
     pub users: UsersConfig,
     pub ldap: Option<LdapConfig>,
+    pub glpi: Option<GLPIConfig>
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -103,6 +121,7 @@ pub struct ConfigUpdate {
     pub admins: Option<AdminsConfig>,
     pub users: Option<UsersConfig>,
     pub ldap: Option<LdapConfig>,
+    pub glpi: Option<GLPIConfig>
 }
 
 // Impls

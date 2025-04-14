@@ -6,6 +6,7 @@ mod security;
 mod unifi;
 mod utils;
 mod ldap;
+mod glpi;
 
 use configurations::config::ConfigApplication;
 use controllers::admin_controller::{self, admin_page};
@@ -13,6 +14,7 @@ use controllers::client_controller::{self, client_connect_page, client_register}
 use controllers::error_controller::handles;
 use controllers::{approver_controller, config_controller, user_controller};
 use db::mongo_db::MongoDb;
+use glpi::glpi::GLPI;
 use ldap::ldap::LdapConnection;
 use rocket::fs::FileServer;
 use rocket::tokio::{
@@ -43,6 +45,12 @@ async fn start() -> _ {
         config.unifi.password.clone(),
     )
     .await;
+    
+    let glpi = {
+        if let Some(glpi_config) = &config.glpi { 
+            GLPI::new(glpi_config.url.clone(), glpi_config.app_token.clone(), glpi_config.authorization.clone())
+        } else { GLPI::new("".to_string(), "".to_string(), "".to_string()) } 
+    };
 
     // Starting scan LDAP
     tokio::spawn(monitoring_ldap(config.clone()));
@@ -71,7 +79,8 @@ async fn start() -> _ {
         .attach(cors)
         .attach(MongoDb::init())
         //
-        .manage(Arc::new(Mutex::new(unifi)))
+        .manage(Arc::new( Mutex::new(unifi) ))
+        .manage(RwLock::new( glpi ))
         .manage(RwLock::new(config.clone()))
         //
         .register("/api", handles())

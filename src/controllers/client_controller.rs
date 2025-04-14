@@ -1,4 +1,5 @@
 use crate::configurations::config::ConfigApp;
+use crate::glpi::glpi::GLPI;
 use crate::model::entity::admin::Admin;
 use crate::model::entity::approver::Approver;
 use crate::model::entity::client::{Client, ClientData, ClientInfo, ClientStatus};
@@ -10,6 +11,7 @@ use crate::utils::error::{BadRequest, CustomError, Error, NotFound, Unauthorized
 use crate::utils::responses::{CustomStatus, Ok, Response};
 use chrono::Local;
 use rocket::fs::NamedFile;
+use rocket::tokio::sync::RwLock;
 use rocket::http::CookieJar;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
@@ -55,9 +57,10 @@ pub async fn client_connection_api(
     repository: MongoRepository<Client>,
     data: Json<ClientInfo>,
     admin: Admin,
-    _config: &State<ConfigApp>,
+    config: &State<ConfigApp>,
+    glpi: &State< RwLock< GLPI > >
 ) -> Result<CustomStatus, CustomError> {
-    //let config = config.read().await;
+    let config = config.read().await;
     let client = data.into_inner();
 
     // Approving a pending order
@@ -72,10 +75,20 @@ pub async fn client_connection_api(
             } else {
                 let _ = unifi.reject_client(&c).await;
                 c.status = ClientStatus::Reject;
+                
+            }
+            
+            if let Some(glpi_config) = &config.glpi {
+                let mut glpi = glpi.write().await;
+                glpi.finish_ticket(
+                    c.id.clone(),
+                    if c.status == ClientStatus::Reject { glpi_config.reject_message.clone() } else { glpi_config.approver_message.clone() },
+                    glpi_config.close_status_ticket, 
+                    glpi_config.template_solution_id
+                ).await;
             }
 
             repository.update(c).await;
-
             return Ok(Response::new_custom_status(200));
         }
     }
@@ -102,8 +115,9 @@ pub async fn client_connection_approver(
     approver_repository: MongoRepository<Approver>,
     data: Json<ClientData>,
     config: &State<ConfigApp>,
+    glpi: &State< RwLock<GLPI> > ,
 ) -> Result<Ok<()>, BadRequest> {
-    let config = config.read().await;
+    let config = config.read().await; 
     let client = data.into_inner();
 
     if !client.validate_form(config.clients.clone()) {
@@ -136,7 +150,20 @@ pub async fn client_connection_approver(
     }
 
     // Approval pending
-    let _ = repository.save(new_client).await;
+    let client = repository.save(new_client).await.unwrap();
+    if let Some(glpi_config) = &config.glpi {
+        let mut glpi = glpi.write().await;
+        glpi.create_ticket(
+            client.clone(), 
+            glpi_config.title_ticket.clone(), 
+            glpi_config.body_titcket.clone(), 
+            glpi_config.open_status_ticket,
+            glpi_config.ticket_priority_id,
+            glpi_config.user_request_id, 
+            glpi_config.ticket_category_id
+        ).await;
+    } 
+
     Ok(Response::new_ok(()))
 }
 
