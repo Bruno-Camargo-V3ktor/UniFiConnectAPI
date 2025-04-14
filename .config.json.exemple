@@ -52,11 +52,12 @@
         "admins_search": [],
 
         "attrs": {
-          name: "cn",
-          username: "sAMAccountName",
-          email: "mail",
-          member: "member", 
-          group: "cn"
+          "name": "cn",
+          "username": "sAMAccountName",
+          "email": "mail",
+          "member": "member", 
+          "group": "cn",
+          "login": "sAMAccountName"
         }
     },
 
