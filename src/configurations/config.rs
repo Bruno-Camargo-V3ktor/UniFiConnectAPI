@@ -37,9 +37,10 @@ pub struct UnifiConfig {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ClientsConfig {
+    pub free_request: bool,
     pub time_connection: usize,
     pub expiration_time: Option<usize>,
-    pub info: Option<ClientInfo>
+    pub info: Option<ClientInfo>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -55,7 +56,7 @@ pub struct ApproversConfig {
     pub code_size: usize,
     pub validity_days_code: usize,
     pub just_numbers: bool,
-    pub encrypted_code: bool, 
+    pub encrypted_code: bool,
 }
 
 #[derive(Serialize, Deserialize, Clone)]

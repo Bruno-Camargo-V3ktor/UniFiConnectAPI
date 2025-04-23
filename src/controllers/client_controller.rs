@@ -1,7 +1,7 @@
 use crate::configurations::config::ConfigApp;
 use crate::glpi::glpi::GLPI;
 use crate::model::entity::admin::Admin;
-use crate::model::entity::approver::Approver;
+use crate::model::entity::approver::{Approver, ApproverGroup};
 use crate::model::entity::client::{Client, ClientData, ClientInfo, ClientStatus};
 use crate::model::repository::Repository;
 use crate::model::repository::mongo_repository::MongoRepository;
@@ -119,11 +119,11 @@ pub async fn client_connection_approver(
 ) -> Result<Ok<()>, BadRequest> {
     let config = config.read().await; 
     let client = data.into_inner();
-
+    
     if !client.validate_form(config.clients.clone()) {
         return Err(Error::new_bad_request("Invalid Form Field(s)"));
     }
-
+    
     let mac = cookies.get("id").unwrap().value().to_string();
     let site = cookies.get("site").unwrap().value().to_string();
     let minutes: u16 = config.clients.time_connection as u16;
@@ -132,39 +132,53 @@ pub async fn client_connection_approver(
     new_client.site = site.clone();
     new_client.mac = mac.clone();
     new_client.time_connection = minutes.to_string();
-
-    // Approval by code
-    if let Some(code) = client.approver_code {
-        let approver = validate_code(code, &approver_repository, config.approvers.encrypted_code).await;
-        if approver.is_none() {
-            return Err(Error::new_bad_request("Invalid Fields"));
+    
+    let pending_client = async | new_client: Client | {
+        let client = repository.save(new_client).await.unwrap();
+        
+        if let Some(glpi_config) = &config.glpi {
+            let mut glpi = glpi.write().await;
+            glpi.create_ticket(
+                client.clone(), 
+                glpi_config.title_ticket.clone(), 
+                glpi_config.body_titcket.clone(), 
+                glpi_config.open_status_ticket,
+                glpi_config.ticket_priority_id,
+                glpi_config.user_request_id, 
+                glpi_config.ticket_category_id
+            ).await;
         }
 
-        new_client.status = ClientStatus::Approved;
-        new_client.approver = approver.unwrap();
+    };
 
-        unifi.conect_client(&new_client).await;
-        let _ = repository.save(new_client).await;
+    if let Some(code) = &client.approver_code {
+        let approver = validate_code(code.clone(), &approver_repository, config.approvers.encrypted_code).await;
+            
+        if let Some(approver) = approver {
+            match approver.group {
+                ApproverGroup::AccessRelease => { 
+                    new_client.fields.insert("approved".to_string(), approver.username.clone());
+                    pending_client( new_client ).await;
+                },
 
-        return Ok(Response::new_ok(()));
+                ApproverGroup::DirectApproval => { 
+                    new_client.status = ClientStatus::Approved;
+                    new_client.approver = approver.username.clone();
+                        
+                    unifi.conect_client( &new_client ).await;
+                    let _ = repository.save(new_client).await;
+                }
+            }   
+        } 
+        else { return Err( Error::new_bad_request("Invalid Fields") ); }
     }
 
-    // Approval pending
-    let client = repository.save(new_client).await.unwrap();
-    if let Some(glpi_config) = &config.glpi {
-        let mut glpi = glpi.write().await;
-        glpi.create_ticket(
-            client.clone(), 
-            glpi_config.title_ticket.clone(), 
-            glpi_config.body_titcket.clone(), 
-            glpi_config.open_status_ticket,
-            glpi_config.ticket_priority_id,
-            glpi_config.user_request_id, 
-            glpi_config.ticket_category_id
-        ).await;
+    else {
+        if !config.clients.free_request { return Err(Error::new_bad_request("Invalid Fields")); }
+        pending_client( new_client ).await;
     } 
 
-    Ok(Response::new_ok(()))
+    Ok( Response::new_ok(()) )
 }
 
 #[get("/client", format = "application/json")]

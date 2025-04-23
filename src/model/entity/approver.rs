@@ -1,8 +1,15 @@
 use crate::{db::mongo_db::serde_object_id, ldap::ldap::LdapUser};
 use chrono::{DateTime, Duration, Local, TimeZone};
 use rocket::serde::{Deserialize, Serialize};
-
 use super::Entity;
+
+
+// Enums
+#[derive(Debug, Deserialize, Serialize)]
+pub enum ApproverGroup {
+    AccessRelease,
+    DirectApproval
+}
 
 // Struct
 #[derive(Debug, Deserialize, Serialize)]
@@ -14,6 +21,7 @@ pub struct Approver {
     pub password: String,
     pub secrete_code: String, 
     pub validity: Option<DateTime<Local>>,
+    pub group: ApproverGroup
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -22,6 +30,7 @@ pub struct ApproverData {
     pub email: String,
     pub password: String,
     pub secrete_code: String,
+    pub group: ApproverGroup
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -84,7 +93,8 @@ impl Approver {
             email: ldap_user.email.clone(),
             password: String::new(),
             secrete_code: String::new(),
-            validity: None
+            validity: None,
+            group: ApproverGroup::AccessRelease
         }
     }
 }

@@ -48,26 +48,25 @@ impl LdapConnection {
             return false;
         }
     
-        // 1. Cria uma conexão LDAP usando um usuário técnico para fazer a busca.
+        
         let (conn, mut ldap) = match LdapConnAsync::new(&self.server).await {
             Ok(pair) => pair,
             Err(_) => return false,
         };
         ldap3::drive!(conn);
     
-        // 2. Realiza o bind inicial (usuário técnico) para ter permissão de pesquisar.
-        if let Err(_) = ldap
+        if ldap
             .simple_bind(&self.username, &self.password)
             .await
-            .and_then(|res| res.success())
+            .and_then(|res| res.success()).is_err()
         {
             return false;
         }
     
-        // 3. Monta o filtro de busca usando um atributo de login configurável (ex: "uid" ou "sAMAccountName").
+        
         let filter = format!("({}={})", self.attributes.login, login);
     
-        // 4. Pesquisa na base configurada usando o filtro.
+
         let (results, _) = match ldap
             .search(&self.base_dn, Scope::Subtree, &filter, vec![""])
             .await
@@ -77,34 +76,26 @@ impl LdapConnection {
             Err(_) => return false,
         };
     
-        // 5. Se achar a entrada, extrai o DN do usuário usando SearchEntry::construct()
         let dn = match results.first() {
             Some(entry) => {
                 let search_entry = SearchEntry::construct(entry.clone());
-                search_entry.dn.clone() // Aqui extraímos o campo `dn` do objeto convertido
+                search_entry.dn.clone()
             },
             None => return false,
         };
     
-        // Libera a conexão técnica antes de proceder com o bind do usuário.
         drop(ldap);
     
-        // 6. Cria uma nova conexão para autenticar com o DN encontrado.
         let (conn2, mut user_ldap) = match LdapConnAsync::new(&self.server).await {
             Ok(pair) => pair,
             Err(_) => return false,
         };
         ldap3::drive!(conn2);
     
-        // 7. Tenta realizar o simple_bind usando o DN do usuário e a senha fornecida.
-        match user_ldap
+        user_ldap
             .simple_bind(&dn, password)
             .await
-            .and_then(|r| r.success())
-        {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+            .and_then(|r| r.success()).is_ok()
     }
 
     pub async fn create_connection(&self) -> Result<Ldap> {

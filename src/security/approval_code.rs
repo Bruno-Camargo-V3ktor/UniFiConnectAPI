@@ -3,7 +3,7 @@ use bcrypt::verify;
 use chrono::Local;
 
 // Functions
-pub async fn validate_code(code: String, repository: &MongoRepository<Approver>, encrypted: bool) -> Option<String> {
+pub async fn validate_code(code: String, repository: &MongoRepository<Approver>, encrypted: bool) -> Option<Approver> {
     let approvers = repository.find_all().await;
     let now = Local::now();
 
@@ -17,7 +17,7 @@ pub async fn validate_code(code: String, repository: &MongoRepository<Approver>,
         }
         
         if !encrypted {
-            if code == ap.secrete_code { return Some(ap.username) }
+            if code == ap.secrete_code { return Some(ap) }
             else { continue; }
         }
 
@@ -25,7 +25,7 @@ pub async fn validate_code(code: String, repository: &MongoRepository<Approver>,
         match res {
             Ok(b) => {
                 if b {
-                    return Some(ap.username);
+                    return Some(ap);
                 } else {
                     continue;
                 }

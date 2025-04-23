@@ -23,6 +23,7 @@
     },
 
     "clients": {
+      "free_request": true
       "time_connection": 180,
       "expiration_time": 24
     },

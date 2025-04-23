@@ -44,6 +44,7 @@ pub async fn create_approver(
         password: approver.password,
         validity: None,
         secrete_code: approver.secrete_code,
+        group: approver.group,
     };
     approver.create_validity(config.approvers.validity_days_code as i64);
 
